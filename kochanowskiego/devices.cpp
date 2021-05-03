@@ -1,7 +1,10 @@
 #include "devices.h"
 
-SwitchService ledSwitch(LED_BUILTIN, "ledSwitch");
-IRTransmitterService irTransmitterService(D2, "irTransmitter");
+String LED_SWITCH_NAME = "ledSwitch";
+SwitchService ledSwitch(LED_BUILTIN, LED_SWITCH_NAME);
+
+String IR_TRANSMITTER_NAME = "irTransmitter";
+IRTransmitterService irTransmitter(D2, IR_TRANSMITTER_NAME);
 
 Devices::Devices(String deviceName) {
     this->deviceName = deviceName;
@@ -9,7 +12,7 @@ Devices::Devices(String deviceName) {
 
 void Devices::init() {
     ledSwitch.init();
-    irTransmitterService.init();
+    irTransmitter.init();
 }
 
 void Devices::blinkLed(int times, int interval) {
@@ -30,29 +33,14 @@ void Devices::activateOfflineMode() {
 }
 
 void Devices::handleMqttCommunication(EspMQTTClient& mqttClient) {
-    String ledSwitchMqttTopic = deviceName + "/" + ledSwitch.getName();
-    String ledSwitchMqttStatusTopic = ledSwitchMqttTopic + "/status";
-    //get previous state
-    mqttClient.subscribe(ledSwitchMqttStatusTopic, [this, &mqttClient, ledSwitchMqttStatusTopic] (const String &payload)  {
-        Serial.println(ledSwitch.getName() + " initial status: " + payload);
-        ledSwitch.handleCommand(payload);
-        mqttClient.unsubscribe(ledSwitchMqttStatusTopic.c_str());
-    });
-
-    mqttClient.subscribe(ledSwitchMqttTopic.c_str(), [this, &mqttClient, ledSwitchMqttStatusTopic] (const String &payload)  {
-        Serial.println(ledSwitch.getName() + " command: " + payload);
-        if (ledSwitch.handleCommand(payload)) {
-            mqttClient.publish(ledSwitchMqttStatusTopic.c_str(), ledSwitch.getStatus(), true);
-        }
-    });
-
-    irTransmitterService.handleMqtt(mqttClient, deviceName);
+    ledSwitch.handleMqtt(mqttClient, deviceName);
+    irTransmitter.handleMqtt(mqttClient, deviceName);
 }
 
 void Devices::getStatus(JsonObject& obj) {
-  JsonObject ledSwitchStatus = obj.createNestedObject("ledSwitch");
+  JsonObject ledSwitchStatus = obj.createNestedObject(LED_SWITCH_NAME);
   ledSwitchStatus["status"] = ledSwitch.getStatus();
 
-  JsonObject irTransmitterStatus = obj.createNestedObject("IRTransmitter");
-  irTransmitterStatus["status"] = irTransmitterService.getStatus();
+  JsonObject irTransmitterStatus = obj.createNestedObject(IR_TRANSMITTER_NAME);
+  irTransmitterStatus["status"] = irTransmitter.getStatus();
 }

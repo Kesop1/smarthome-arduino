@@ -6,6 +6,7 @@
 #include <EspMQTTClient.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
+#include <ArduinoJson.h>
 
 class IRTransmitterService: public ElementService {
 

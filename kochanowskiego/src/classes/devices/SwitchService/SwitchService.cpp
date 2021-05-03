@@ -26,6 +26,24 @@ boolean SwitchService::isSwitched() {
     return switched;
 }
 
+void SwitchService::handleMqtt(EspMQTTClient& mqttClient, String deviceName) {
+    String switchMqttTopic = deviceName + "/" + getName();
+    String switchMqttStatusTopic = switchMqttTopic + "/status";
+    //get previous state
+    mqttClient.subscribe(switchMqttStatusTopic, [this, &mqttClient, switchMqttStatusTopic] (const String &payload)  {
+        Serial.println(getName() + " initial status: " + payload);
+        handleCommand(payload);
+        mqttClient.unsubscribe(switchMqttStatusTopic.c_str());
+    });
+
+    mqttClient.subscribe(switchMqttTopic.c_str(), [this, &mqttClient, switchMqttStatusTopic] (const String &payload)  {
+        Serial.println(getName() + " command: " + payload);
+        if (handleCommand(payload)) {
+            mqttClient.publish(switchMqttStatusTopic.c_str(), getStatus(), true);
+        }
+    });
+}
+
 boolean SwitchService::handleCommand(String command) {
   Serial.println(getName() + " command received: " + command);
   if(command == "ON") {

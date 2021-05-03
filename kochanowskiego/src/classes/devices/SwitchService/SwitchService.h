@@ -3,6 +3,7 @@
 
 #include "../ElementService/ElementService.h"
 #include <Arduino.h>
+#include <EspMQTTClient.h>
 
 class SwitchService: public ElementService {
 
@@ -21,6 +22,8 @@ public:
     void off();
 
     boolean isSwitched();
+
+    void handleMqtt(EspMQTTClient& mqttClient, String deviceName);
 
     boolean handleCommand(String command);
 
