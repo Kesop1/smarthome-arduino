@@ -5,6 +5,7 @@ IRTransmitter command JSON:
   "signal": string
 }
 
+Copy all the files in the Elements folder and put in the Arduino library folder
 
 
 Arduino docker installation:
@@ -27,3 +28,4 @@ Failed to connect to ESP8266: Timed out waiting for packet header: connect D3 to
 RESTART DOCKER
 
 http://paulmurraycbr.github.io/ArduinoTheOOWay.html
+
