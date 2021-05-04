@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include <EspMQTTClient.h>
 #include <ArduinoJson.h>
-#include "src/classes/devices/SwitchService/SwitchService.h"
-#include "src/classes/devices/IRTransmitterService/IRTransmitterService.h"
+#include <SwitchService.h>
+#include <IRTransmitterService.h>
 
 class Devices {
 

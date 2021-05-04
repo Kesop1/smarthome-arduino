@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include <EspMQTTClient.h>
 #include <ArduinoJson.h>
-#include "src/classes/sensors/dht/dht_service.h"
-#include "src/classes/sensors/photoresistor/photoresistor_service.h"
+#include <DhtService.h>
+#include <PhotoresistorService.h>
 
 class Sensors {
 
