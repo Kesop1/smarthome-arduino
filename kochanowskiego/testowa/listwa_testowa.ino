@@ -45,8 +45,7 @@ void handleMQTTCommunication() {
     Serial.print("WiFi: " + String(mqttClient.isWifiConnected()));
     Serial.println(", MQTT: " + String(mqttClient.isMqttConnected()));
     failedConectionAttempts++;
-    devices.blinkLed(2, 100);
-    devices.blinkLed(2, 300);
+    devices.connectionFailed();
   } else {
     if(failedConectionAttempts > 0) {
       Serial.println("Connected");

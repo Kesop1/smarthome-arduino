@@ -25,6 +25,10 @@ void Devices::blinkLed(int times, int interval) {
   ledSwitch.off();
 }
 
+void Devices::connectionFailed() {
+  blinkLed(2, 100);
+  blinkLed(2, 300);
+}
 
 void Devices::activateOfflineMode() {
   blinkLed(3, 100);

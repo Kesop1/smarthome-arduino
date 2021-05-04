@@ -22,6 +22,8 @@ public:
 
     void handleMqttCommunication(EspMQTTClient& mqttClient);
 
+    void connectionFailed();
+
     void activateOfflineMode();
 
     void getStatus(JsonObject& obj);
