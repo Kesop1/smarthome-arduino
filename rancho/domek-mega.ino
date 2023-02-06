@@ -1,4 +1,4 @@
-#include <WiFi.h>
+#include <Ethernet.h>
 #include <PubSubClient.h>
 #include <DHT.h>
 
@@ -105,27 +105,33 @@ class ShutterRelay {
 
 unsigned long currentMillis;
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+// Replace with your network details
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+IPAddress ip(192, 168, 0, 103);
+IPAddress gateway(192, 168, 0, 1);
+IPAddress subnet(255, 255, 255, 0);
 
-// Replace with your network credentials
-const char* ssid = "YourSSID";
-const char* password = "YourPassword";
+EthernetClient ethClient;
+PubSubClient client(ethClient);
 
 // Replace with the MQTT broker IP and port
-const char* mqtt_server = "broker.example.com";
+const char* mqtt_server = "127.0.0.1";
 const int mqtt_port = 1883;
 
 
 // DHT sensor setup
-const long DHT_READ_FREQUENCY = 60000;
+const long TEMPERATURE_READ_FREQUENCY = 60000;
 #define DHTTYPE DHT22
-DHT dhtD1(2, DHTTYPE);
+DHT dhtD9(2, DHTTYPE);
 DHT dhtD2(3, DHTTYPE);
 
 
+// Pin numbers for floor temperature sensors
+const int floorTeperatureSensorPinD1 = 6;
+
+
 // Pin numbers for flood sensors
-const int floodSensorPin = 13;
+const int floodSensorPin = 21;
 
 
 const long SHUTTER_LONG_OPERATION_DURATION = 20000;
@@ -138,12 +144,12 @@ ShutterRelay shutterM13(13, 14, SHUTTER_SHORT_OPERATION_DURATION, &client, "M13"
 
 
 /**
-  read all DHT sensors every DHT_READ_FREQUENCY miliseconds
+  read all DHT sensors every TEMPERATURE_READ_FREQUENCY miliseconds
 */
 void readDHTValues() {
   static unsigned long lastReadMillis = 0;
-  if (currentMillis - lastReadMillis > DHT_READ_FREQUENCY) {
-    readDHT(dhtD1, "D1");
+  if (currentMillis - lastReadMillis > TEMPERATURE_READ_FREQUENCY) {
+    readDHT(dhtD9, "D9");
     readDHT(dhtD2, "D2");
   }
 }
@@ -186,6 +192,28 @@ void checkShuttersStillActive() {
   }
 }
 
+/**
+  read all floor temperature sensors every TEMPERATURE_READ_FREQUENCY miliseconds
+*/
+void readFloorTemperatures() {
+  static unsigned long lastReadMillis = 0;
+  if (currentMillis - lastReadMillis > TEMPERATURE_READ_FREQUENCY) {
+    readFloorTemperatureValue(floorTeperatureSensorPinD1, "D1");
+  }
+}
+
+/**
+  read floor temperature value and publish to topic
+*/
+void readFloorTemperatureValue(int pin, String topic) {
+  char topicTemperature[20];
+  snprintf(topicTemperature, 20, "/%d/temperature", topic);
+  int temperature = analogRead(pin);
+  char payloadTemperature[20];
+  snprintf(payloadTemperature, 20, "%.2f", temperature);
+  client.publish(topicTemperature, payloadTemperature);
+}
+
 void readFloodSensorValues() {
 
  // Read the state of the flood sensor
@@ -226,19 +254,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void setup() {
   Serial.begin(115200);
 
-  dhtD1.begin();
+  dhtD9.begin();
   dhtD2.begin();
 
   // Set the pin mode for the flood sensor
   pinMode(floodSensorPin, INPUT);
 
-  // Connect to WiFi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
-  }
-  Serial.println("Connected to WiFi");
+  pinMode(floorTeperatureSensorPinD1, INPUT);
+
+  Ethernet.begin(mac, ip, gateway, subnet);
 
   // Connect to MQTT broker
   client.setServer(mqtt_server, mqtt_port);
@@ -266,5 +290,6 @@ void loop() {
   readDHTValues();
   readFloodSensorValues();
   checkShuttersStillActive();
+  readFloorTemperatures();
   
 }
