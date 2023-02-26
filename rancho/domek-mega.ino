@@ -145,16 +145,17 @@ boolean isRelay(char* deviceName) {
 
 void moveShutter(char* shutterRelay, String command) {
   Serial.println("Move shutter " + String(shutterRelay) + " command " + command + " received");
-  lastShutterRelayCommandMillis = currentMillis;
   int pinHigh = shutterRelaysHighMap[shutterRelay];
   int pinLow = shutterRelaysLowMap[shutterRelay];
   digitalWrite(pinHigh, RELAY_DEFAULT_OFF);
   digitalWrite(pinLow, RELAY_DEFAULT_OFF);
   if (command == "UP") {
+    lastShutterRelayCommandMillis = currentMillis;
     publishDeviceStatus(shutterRelay, "GOING UP");
     delay(20);
     digitalWrite(pinHigh, !RELAY_DEFAULT_OFF);
   } else if (command == "DOWN") {
+    lastShutterRelayCommandMillis = currentMillis;
     publishDeviceStatus(shutterRelay, "GOING DOWN");
     delay(20);
     digitalWrite(pinLow, !RELAY_DEFAULT_OFF);
@@ -349,7 +350,10 @@ void subscribeRelays() {
   reset shutter relays pins MAX_SHUTTER_RELAY_COMMAND_PROCESSING_TIME aftre the lst received command to avoid setting both pins to HIGH, which could cause shutter damage
 */
 void resetShutterRelays() {
-  if (lastShutterRelayCommandMillis != 0 && currentMillis - lastShutterRelayCommandMillis > MAX_SHUTTER_RELAY_COMMAND_PROCESSING_TIME) {
+  if (lastShutterRelayCommandMillis == 0L) {
+    return;
+  }
+  if (currentMillis - lastShutterRelayCommandMillis > MAX_SHUTTER_RELAY_COMMAND_PROCESSING_TIME) {
     Serial.println("Resetting relays pins");
     lastShutterRelayCommandMillis = 0;
     for (auto const& [deviceName, objectType] : objectsMap) {
