@@ -24,8 +24,12 @@ EthernetClient ethClient;
 PubSubClient client(ethClient);
 
 // Replace with the MQTT broker IP and port
-const char* mqtt_server = "192.168.1.214";
-const int mqtt_port = 1883;
+const char* MQTT_SERVER_ADDRESS = "192.168.1.214";
+const int MQTT_SERVER_PORT = 1883;
+const char* DEVICE_NAME = "arduinoMega";
+const char* DEVICE_AVAILABILITY_TOPIC = (String(DEVICE_NAME) + "/available").c_str();
+const char* HOME_ASSISTANT_USER = "homeassistant";
+const char* HOME_ASSISTANT_PASSWORD = "";
 
 std::map<std::string, int> sensorPinsMap;
 
@@ -54,7 +58,8 @@ std::map<std::string, objectType> objectsMap;
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Starting device");
+  Serial.print("Starting device ");
+  Serial.println(DEVICE_NAME);
   initializeShutterRelays();
   initializeDhtSensors();
   initializeFlorTemperatureSensors();
@@ -63,7 +68,7 @@ void setup() {
   Ethernet.begin(mac, ip, gateway, subnet);
 
   // Connect to MQTT broker
-  client.setServer(mqtt_server, mqtt_port);
+  client.setServer(MQTT_SERVER_ADDRESS, MQTT_SERVER_PORT);
   client.setCallback(callback);
 }
 
@@ -149,9 +154,13 @@ void loop() {
 void reconnectToMQTT() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
-    if (client.connect("arduinoMega", "homeassistant", "", "arduinoMega/available", 0, true, "offline")) {
+    String availability = String(DEVICE_NAME) + "/available";
+    int topicLength = availability.length() + 1;
+    char availabilityTopic[topicLength];
+    availability.toCharArray(availabilityTopic, topicLength);
+    if (client.connect(DEVICE_NAME, HOME_ASSISTANT_USER, HOME_ASSISTANT_PASSWORD, availabilityTopic, 0, true, "offline")) {
       Serial.println("connected");
-      client.publish("arduinoMega/available", "online", true);
+      client.publish(availabilityTopic, "online", true);
       subscribeToTopics();
     } else {
       Serial.print("failed, rc=");
@@ -210,13 +219,6 @@ void readFloorSensors() {
       Serial.print(value);
       Serial.println(" C");
 
-      // char topicTemperature[20];
-      // String tempTopic = device;
-      // tempTopic.toCharArray(topicTemperature, 20);
-      // char payloadTemperature[20];
-      // String temperatureValue = String(value);
-      // temperatureValue.toCharArray(payloadTemperature, 20);
-      // client.publish(topicTemperature, payloadTemperature);
       publishSensorValue(device, String(value));
     }
   }
