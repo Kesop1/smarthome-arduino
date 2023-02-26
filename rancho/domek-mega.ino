@@ -4,6 +4,8 @@
 #include <Ethernet.h>
 #include <PubSubClient.h>
 #include <DHT.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
 
 #define RELAY_DEFAULT_OFF HIGH
 #define M10_HIGH  22
@@ -48,6 +50,12 @@ const long TEMPERATURE_READ_FREQUENCY = 600000;
 DHT dhtD9(2, DHTTYPE);
 DHT dhtD2(3, DHTTYPE);
 
+//BME280 sensor setup
+#define ALTITUDE 0
+Adafruit_BME280 bme; // I2C
+const long BME_TEMPERATURE_READ_FREQUENCY = 600000;
+
+
 //floor sensors setup
 const long FLOOR_TEMPERATURE_READ_FREQUENCY = 60000;
 #define D1_FLOOR_SENSOR_PIN A0
@@ -71,6 +79,7 @@ void setup() {
   Serial.println(DEVICE_NAME);
   initializeShutterRelays();
   initializeDhtSensors();
+  initializeBme280Sensors();
   initializeFlorTemperatureSensors();
 
   // Connect to Ethernet
@@ -108,6 +117,14 @@ void initializeShutterRelays() {
 void initializeFlorTemperatureSensors() {
   objectsMap["d1"] = NTC_TEMPERATURE_SENSOR_10K;
   sensorPinsMap["d1"] = D1_FLOOR_SENSOR_PIN;
+}
+
+void initializeBme280Sensors() {
+    bool status = bme.begin();  
+    status = bme.begin(0x76);  //The I2C address of the sensor I use is 0x76
+    if (!status) {
+        Serial.print("Sensor not working, check connections");//TODO mapa
+    }
 }
 
 void initializeDhtSensors() {
@@ -179,6 +196,7 @@ void loop() {
   client.loop();
 
   readDHTValues();
+  readBme280Values();
   readFloorSensors();
   resetShutterRelays();
 }
@@ -212,6 +230,33 @@ void readDHTValues() {
     lastReadMillis = currentMillis;
     readDHT(dhtD9, "d9");
     readDHT(dhtD2, "d2");
+  }
+}
+
+void readBme280Values() {//TODO: multiple sensors!!!
+  static unsigned long lastReadMillis = 0;
+  if (currentMillis - lastReadMillis > BME_TEMPERATURE_READ_FREQUENCY) {
+    lastReadMillis = currentMillis;
+    String temperature = String(bme.readTemperature(), 1);
+    Serial.print("Temperature = ");
+    Serial.print(temperature);
+    Serial.println(" °C");
+    publishSensorValue("d9", temperature);
+
+    Serial.print("Pressure = ");
+    float pressure = bme.readPressure();
+    pressure = bme.seaLevelForAltitude(ALTITUDE, pressure);
+    pressure = pressure/100.0F;
+    String pressureString = String(pressure,2);
+    Serial.print(pressureString);
+    Serial.println(" hPa");
+    publishSensorValue("n7", pressureString);
+
+    Serial.print("Humidity = ");
+    String humidity = String(bme.readHumidity(), 0);
+    Serial.print(humidity);
+    Serial.println(" %");
+    publishSensorValue("c7", humidity);
   }
 }
 
