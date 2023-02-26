@@ -6,19 +6,28 @@
 #include <DHT.h>
 
 #define RELAY_DEFAULT_OFF HIGH
-#define M10_HIGH 21
-#define M10_LOW 22
+#define M10_HIGH  22
+#define M10_LOW   23
+#define M11_HIGH  24
+#define M11_LOW   25
+#define M12_HIGH  26
+#define M12_LOW   27
+#define M13_HIGH  28
+#define M13_LOW   29
+
 
 std::map<std::string, int> shutterRelaysHighMap;
 std::map<std::string, int> shutterRelaysLowMap;
 
 unsigned long currentMillis;
+unsigned long lastShutterRelayCommandMillis;
+const long MAX_SHUTTER_RELAY_COMMAND_PROCESSING_TIME = 20000;
 
 // Replace with your network details
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEE };
-IPAddress ip(192, 168, 1, 103);
-IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 255, 0);
+IPAddress ETH_IP_ADDRESS(192, 168, 1, 103);
+IPAddress ETH_GATEWAY(192, 168, 1, 1);
+IPAddress ETH_SUBNET(255, 255, 255, 0);
 
 EthernetClient ethClient;
 PubSubClient client(ethClient);
@@ -65,7 +74,7 @@ void setup() {
   initializeFlorTemperatureSensors();
 
   // Connect to Ethernet
-  Ethernet.begin(mac, ip, gateway, subnet);
+  Ethernet.begin(mac, ETH_IP_ADDRESS, ETH_GATEWAY, ETH_SUBNET);
 
   // Connect to MQTT broker
   client.setServer(MQTT_SERVER_ADDRESS, MQTT_SERVER_PORT);
@@ -73,25 +82,26 @@ void setup() {
 }
 
 void initializeShutterRelays() {
-  objectsMap["m10"] = SHUTTER_RELAY;
-  shutterRelaysHighMap["m10"] = M10_HIGH;
-  shutterRelaysLowMap["m10"] = M10_LOW;
-
-  objectsMap["M11"] = RELAY;  //TODO
-
-  shutterRelaysHighMap["M11"] = 23;
-  shutterRelaysLowMap["M11"] = 24;
-  shutterRelaysHighMap["M12"] = 25;
-  shutterRelaysLowMap["M12"] = 26;
-  shutterRelaysHighMap["M13"] = 27;
-  shutterRelaysLowMap["M13"] = 28;
-
+  objectsMap["m10"] =             SHUTTER_RELAY;
+  shutterRelaysHighMap["m10"] =   M10_HIGH;
+  shutterRelaysLowMap["m10"] =    M10_LOW;
+  objectsMap["m11"] =             SHUTTER_RELAY;
+  shutterRelaysHighMap["m11"] =   M11_HIGH;
+  shutterRelaysLowMap["m11"] =    M11_LOW;
+  objectsMap["m12"] =             SHUTTER_RELAY;
+  shutterRelaysHighMap["m12"] =   M12_HIGH;
+  shutterRelaysLowMap["m12"] =    M12_LOW;
+  objectsMap["m13"] =             SHUTTER_RELAY;
+  shutterRelaysHighMap["m13"] =   M13_HIGH;
+  shutterRelaysLowMap["m13"] =    M13_LOW;
   // Iterate through the  map and set pinMode to OUTPUT for each pin
   for (auto const& [deviceName, pinNumber] : shutterRelaysHighMap) {
     pinMode(pinNumber, OUTPUT);
+    digitalWrite(pinNumber, RELAY_DEFAULT_OFF);
   }
   for (auto const& [deviceName, pinNumber] : shutterRelaysLowMap) {
     pinMode(pinNumber, OUTPUT);
+    digitalWrite(pinNumber, RELAY_DEFAULT_OFF);
   }
 }
 
@@ -119,7 +129,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print(". Message: ");
   Serial.println(message);
   if (isShutterRelay(topic)) {
-    Serial.println("moveShutter");
+    moveShutter(topic, message);
   } else if (isRelay(topic)) {
     Serial.println("relay");
   }
@@ -133,9 +143,29 @@ boolean isRelay(char* deviceName) {
   return objectsMap[deviceName] == RELAY;
 }
 
-void moveShutter(char* shutterRelay, char* command) {
+void moveShutter(char* shutterRelay, String command) {
+  Serial.println("Move shutter " + String(shutterRelay) + " command " + command + " received");
+  lastShutterRelayCommandMillis = currentMillis;
+  int pinHigh = shutterRelaysHighMap[shutterRelay];
+  int pinLow = shutterRelaysLowMap[shutterRelay];
+  digitalWrite(pinHigh, RELAY_DEFAULT_OFF);
+  digitalWrite(pinLow, RELAY_DEFAULT_OFF);
+  if (command == "UP") {
+    publishDeviceStatus(shutterRelay, "GOING UP");
+    delay(20);
+    digitalWrite(pinHigh, !RELAY_DEFAULT_OFF);
+  } else if (command == "DOWN") {
+    publishDeviceStatus(shutterRelay, "GOING DOWN");
+    delay(20);
+    digitalWrite(pinLow, !RELAY_DEFAULT_OFF);
+  } else if (command == "STOP") {
+    publishDeviceStatus(shutterRelay, "UNKNOWN");
+  } else if (command == "RESET") {
+    publishDeviceStatus(shutterRelay, "RESET");
+  } else {
+    Serial.println("Unrecognized shutter relay command " + command + "!");
+  }
 }
-
 
 // ---------------------------------------------------------------------------
 
@@ -149,6 +179,7 @@ void loop() {
 
   readDHTValues();
   readFloorSensors();
+  resetShutterRelays();
 }
 
 void reconnectToMQTT() {
@@ -210,7 +241,7 @@ void readFloorSensors() {
         T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
         Tc = T - 273.15;
         value += Tc;
-        delay(500);      
+        delay(500);//TODO DELAY!!!      
       }
       value = value / samples;
       
@@ -236,6 +267,21 @@ void publishSensorValue(String device, String value) {
   char payload[valueLength];
   value.toCharArray(payload, valueLength);
   client.publish(topic, payload);
+}
+
+/*
+  publish device status to device status topic
+*/
+void publishDeviceStatus(String device, String value) {
+  String status = device + "/state";
+  int topicLength = status.length() + 1;
+  char statusTopic[topicLength];
+  status.toCharArray(statusTopic, topicLength);
+  
+  int valueLength = value.length() + 1;
+  char payload[valueLength];
+  value.toCharArray(payload, valueLength);
+  client.publish(statusTopic, payload);
 }
 
 /**
@@ -296,5 +342,22 @@ void subscribeRelays() {
       continue;
     }
     client.subscribe(deviceName.c_str());
+  }
+}
+
+/**
+  reset shutter relays pins MAX_SHUTTER_RELAY_COMMAND_PROCESSING_TIME aftre the lst received command to avoid setting both pins to HIGH, which could cause shutter damage
+*/
+void resetShutterRelays() {
+  if (lastShutterRelayCommandMillis != 0 && currentMillis - lastShutterRelayCommandMillis > MAX_SHUTTER_RELAY_COMMAND_PROCESSING_TIME) {
+    Serial.println("Resetting relays pins");
+    lastShutterRelayCommandMillis = 0;
+    for (auto const& [deviceName, objectType] : objectsMap) {
+      if (objectType != SHUTTER_RELAY) {
+        continue;
+      }
+      char* deviceChar = deviceName.c_str();
+      moveShutter(deviceChar, "RESET");
+    }
   }
 }
