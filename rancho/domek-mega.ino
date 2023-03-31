@@ -7,6 +7,8 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
+unsigned long currentMillis;
+
 #define RELAY_DEFAULT_OFF HIGH
 #define M10_HIGH  22
 #define M10_LOW   23
@@ -16,14 +18,14 @@
 #define M12_LOW   27
 #define M13_HIGH  28
 #define M13_LOW   29
-
-
 std::map<std::string, int> shutterRelaysHighMap;
 std::map<std::string, int> shutterRelaysLowMap;
-
-unsigned long currentMillis;
 unsigned long lastShutterRelayCommandMillis;
 const long MAX_SHUTTER_RELAY_COMMAND_PROCESSING_TIME = 20000;
+
+#define M6_PIN    30
+std::map<std::string, int> relayPinsMap;
+
 
 // Replace with your network details
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEE };
@@ -78,6 +80,7 @@ void setup() {
   Serial.print("Starting device ");
   Serial.println(DEVICE_NAME);
   initializeShutterRelays();
+  initializeRelays();
   initializeDhtSensors();
   initializeBme280Sensors();
   initializeFlorTemperatureSensors();
@@ -109,6 +112,16 @@ void initializeShutterRelays() {
     digitalWrite(pinNumber, RELAY_DEFAULT_OFF);
   }
   for (auto const& [deviceName, pinNumber] : shutterRelaysLowMap) {
+    pinMode(pinNumber, OUTPUT);
+    digitalWrite(pinNumber, RELAY_DEFAULT_OFF);
+  }
+}
+
+void initializeRelays() {
+  objectsMap["m6"] = RELAY;
+  relayPinsMap["m6"] = M6_PIN;
+  // Iterate through the  map and set pinMode to OUTPUT for each pin
+  for (auto const& [deviceName, pinNumber] : relayPinsMap) {
     pinMode(pinNumber, OUTPUT);
     digitalWrite(pinNumber, RELAY_DEFAULT_OFF);
   }
@@ -148,7 +161,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if (isShutterRelay(topic)) {
     moveShutter(topic, message);
   } else if (isRelay(topic)) {
-    Serial.println("relay");
+    controlRelay(topic, message);
   }
 }
 
@@ -182,6 +195,20 @@ void moveShutter(char* shutterRelay, String command) {
     publishDeviceStatus(shutterRelay, "RESET");
   } else {
     Serial.println("Unrecognized shutter relay command " + command + "!");
+  }
+}
+
+void controlRelay(char* relay, String command) {
+  Serial.println("Control relay " + String(relay) + " command " + command + " received");
+  int pin = relayPinsMap[relay];
+  if (command == "ON") {
+    publishDeviceStatus(relay, "ON");
+    digitalWrite(pin, !RELAY_DEFAULT_OFF);
+  } else if (command == "OFF") {
+    publishDeviceStatus(relay, "OFF");
+    digitalWrite(pin, RELAY_DEFAULT_OFF);
+  } else {
+    Serial.println("Unrecognized relay command " + command + "!");
   }
 }
 
@@ -392,7 +419,8 @@ void subscribeRelays() {
 }
 
 /**
-  reset shutter relays pins MAX_SHUTTER_RELAY_COMMAND_PROCESSING_TIME aftre the lst received command to avoid setting both pins to HIGH, which could cause shutter damage
+  reset shutter relays pins MAX_SHUTTER_RELAY_COMMAND_PROCESSING_TIME after the last received command
+  to avoid setting both pins to HIGH, which could cause shutter damage
 */
 void resetShutterRelays() {
   if (lastShutterRelayCommandMillis == 0L) {
