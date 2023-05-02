@@ -384,10 +384,6 @@ void readFloorTemperatureSensors() {
   Serial.print(temperature);
   Serial.println(" *C");
   send(msgD1.set(temperature,1));
-  int16_t d1Value = analogRead(D1_ANALOG_PIN);
-  Serial.println("D1 value: ");
-  Serial.println(d1Value);
-  send(msgD1.set(d1Value));
 }
 
 void readPressureSensors() {
