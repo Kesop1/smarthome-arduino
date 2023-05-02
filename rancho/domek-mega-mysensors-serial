@@ -86,6 +86,7 @@
 #include <MySensors.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <dht.h>
 
 unsigned long currentMillis;
 bool initialValueSent = false;
@@ -149,14 +150,16 @@ MyMessage msgM6(M6_ID, V_STATUS);
 sensor2 - 10kO - analogRead
 10kO - GND
 */
+#define ntc_nominal_resistance 10000       //Nominal resistance at 25⁰C
+#define ntc_nominal_temeprature 25   // temperature for nominal resistance (almost always 25⁰ C)
+#define ntc_samplingrate 10
+#define ntc_beta 3950  // The beta coefficient or the B value of the thermistor (usually 3000-4000) check the datasheet for the accurate value.
+#define ntc_Rref 10000   //Value of  resistor used for the voltage divider
+
 #define D1_ID 30
 #define D1_ANALOG_PIN A1
 MyMessage msgD1(D1_ID, V_TEMP);
-#define d1_nominal_resistance 10000       //Nominal resistance at 25⁰C
-#define d1_nominal_temeprature 25   // temperature for nominal resistance (almost always 25⁰ C)
-#define d1_samplingrate 5
-#define d1_beta 3950  // The beta coefficient or the B value of the thermistor (usually 3000-4000) check the datasheet for the accurate value.
-#define d1_Rref 10000   //Value of  resistor used for the voltage divider
+
 
 //BME280 sensor setup
 /*
@@ -169,15 +172,35 @@ SDA -> SDA (20)
 Adafruit_BME280 D9_bme; // I2C
 MyMessage msgD9(D9_ID, V_TEMP);
 
+//DHT22 sensor setup
+/*
+1- > 5V
+2 -> 5V + 10kO - DATA
+3 -> 
+4 -> GND
+*/
+dht D4_DHT22;
+#define D4_ID 32
+#define D4_PIN A3
+MyMessage msgD4(D4_ID, V_TEMP);
+
+
+
 //------------- pressure sensors -----------------//
 //IDs starting with 40
 #define N7_ID 40
 MyMessage msgN7(N7_ID, V_PRESSURE);
 
+
+
 //------------- humidity sensors -----------------//
 //IDs starting with 50
 #define C7_ID 50
 MyMessage msgC7(C7_ID, V_HUM);
+
+#define C2_ID 51
+MyMessage msgC2(C2_ID, V_HUM);
+
 
 
 void presentation() {
@@ -251,6 +274,7 @@ void initializeBme280Sensors() {
 }
 
 void loop() {
+  currentMillis = millis();
   if (!initialValueSent) {
     setInitialValuesFromController();
     initialValueSent = true;
@@ -346,43 +370,53 @@ void readTemperatureSensors() {
   Serial.println("Reading temperature sensors values");
   readFloorTemperatureSensors();
   readBme280TemperatureSensors();
+  readDHT22TemperatureSensors();
 }
 
 void readBme280TemperatureSensors() {
   String d9Temperature = String(D9_bme.readTemperature(), 1);
-  Serial.print("D9 temperature = ");
-  Serial.print(d9Temperature);
-  Serial.println(" °C");
+  Serial.println("D9 temperature = " + d9Temperature + " °C");
   send(msgD9.set(d9Temperature));
 }
- 
+
+void readDHT22TemperatureSensors() {
+  int d4_chk = D4_DHT22.read22(D4_PIN);
+  Serial.println("D4 sensor status: " + String(d4_chk));
+  String d4Temperature = String(D4_DHT22.temperature, 1);
+  Serial.println("D4 temperature: " + d4Temperature + " °C");
+  send(msgD4.set(d4Temperature));
+}
+
 
 void readFloorTemperatureSensors() {
   uint8_t i;
   float average;
   int samples = 0;
-  for (i = 0; i < d1_samplingrate; i++) {
+  for (i = 0; i < ntc_samplingrate; i++) {
     int value = analogRead(D1_ANALOG_PIN);
+    Serial.print("D1 value read number ");
+    Serial.print(i);
+    Serial.print(": ");
     Serial.println(value);
     samples += value;
     delay(50);
   }
   average = 0;
-  average = samples / d1_samplingrate;
+  average = samples / ntc_samplingrate;
   average = 1023 / average - 1;
-  average = d1_Rref / average;
-  Serial.print("Thermistor resistance ");
+  average = ntc_Rref / average;
+  Serial.print("D1 Thermistor resistance ");
   Serial.println(average);
   float temperature;
-  temperature = average / d1_nominal_resistance;     // (R/Ro)
+  temperature = average / ntc_nominal_resistance;     // (R/Ro)
   temperature = log(temperature);                  // ln(R/Ro)
-  temperature /= d1_beta;                   // 1/B * ln(R/Ro)
-  temperature += 1.0 / (d1_nominal_temeprature + 273.15); // + (1/To)
+  temperature /= ntc_beta;                   // 1/B * ln(R/Ro)
+  temperature += 1.0 / (ntc_nominal_temeprature + 273.15); // + (1/To)
   temperature = 1.0 / temperature;                 // Invert
   temperature -= 273.15;                         // convert absolute temp to C
-  Serial.print("Temperature ");
+  Serial.print("D1 Temperature ");
   Serial.print(temperature);
-  Serial.println(" *C");
+  Serial.println(" °C");
   send(msgD1.set(temperature,1));
 }
 
@@ -396,7 +430,7 @@ void readBme280PressureSensors() {
   pressure = D9_bme.seaLevelForAltitude(ALTITUDE, pressure);
   pressure = pressure/100.0F;
   String n7Pressure = String(pressure,2);
-  Serial.print(n7Pressure);
+  Serial.print("N7 pressure: " + n7Pressure);
   Serial.println(" hPa");
   send(msgN7.set(n7Pressure));
 }
@@ -404,11 +438,17 @@ void readBme280PressureSensors() {
 void readHumiditySensors() {
   Serial.println("Reading humidity sensors values");
   readBme280HumiditySensors();
+  readDHT22HumiditySensors();
 }
 
 void readBme280HumiditySensors() {
   String c7humidity = String(D9_bme.readHumidity(), 0);
-  Serial.print(c7humidity);
-  Serial.println(" %");
+  Serial.println("C7 humidity: " + c7humidity + " %");
   send(msgC7.set(c7humidity));
+}
+
+void readDHT22HumiditySensors() {
+  String c2Humidity = String(D4_DHT22.humidity, 1);
+  Serial.println("C2 humidity: " + c2Humidity + " %");
+  send(msgC2.set(c2Humidity));
 }
