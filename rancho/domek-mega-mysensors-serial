@@ -1,0 +1,418 @@
+/**
+* The MySensors Arduino library handles the wireless radio link and protocol
+* between your home built sensors/actuators and HA controller of choice.
+* The sensors forms a self healing radio network with optional repeaters. Each
+* repeater and gateway builds a routing tables in EEPROM which keeps track of the
+* network topology allowing messages to be routed to nodes.
+*
+* Created by Henrik Ekblad <henrik.ekblad@mysensors.org>
+* Copyright (C) 2013-2019 Sensnology AB
+* Full contributor list: https://github.com/mysensors/MySensors/graphs/contributors
+*
+* Documentation: http://www.mysensors.org
+* Support Forum: http://forum.mysensors.org
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License
+* version 2 as published by the Free Software Foundation.
+*
+*******************************
+*
+* DESCRIPTION
+* The ArduinoGateway prints data received from sensors on the serial link.
+* The gateway accepts input on serial which will be sent out on radio network.
+*
+* The GW code is designed for Arduino Nano 328p / 16MHz
+*
+* Wire connections (OPTIONAL):
+* - Inclusion button should be connected between digital pin 3 and GND
+* - RX/TX/ERR leds need to be connected between +5V (anode) and digital pin 6/5/4 with resistor 270-330R in a series
+*
+* LEDs (OPTIONAL):
+* - To use the feature, uncomment any of the MY_DEFAULT_xx_LED_PINs
+* - RX (green) - blink fast on radio message received. In inclusion mode will blink fast only on presentation received
+* - TX (yellow) - blink fast on radio message transmitted. In inclusion mode will blink slowly
+* - ERR (red) - fast blink on error during transmission error or receive crc error
+*
+*/
+
+// Enable debug prints to serial monitor
+#define MY_DEBUG
+
+
+// Enable and select radio type attached
+// #define MY_RADIO_RF24
+//#define MY_RADIO_NRF5_ESB
+//#define MY_RADIO_RFM69
+//#define MY_RADIO_RFM95
+
+// Set LOW transmit power level as default, if you have an amplified NRF-module and
+// power your radio separately with a good regulator you can turn up PA level.
+// #define MY_RF24_PA_LEVEL RF24_PA_LOW
+
+// Enable serial gateway
+#define MY_GATEWAY_SERIAL
+
+// Define a lower baud rate for Arduinos running on 8 MHz (Arduino Pro Mini 3.3V & SenseBender)
+#if F_CPU == 8000000L
+#define MY_BAUD_RATE 38400
+#endif
+
+// Enable inclusion mode
+#define MY_INCLUSION_MODE_FEATURE
+// Enable Inclusion mode button on gateway
+//#define MY_INCLUSION_BUTTON_FEATURE
+
+// Inverses behavior of inclusion button (if using external pullup)
+//#define MY_INCLUSION_BUTTON_EXTERNAL_PULLUP
+
+// Set inclusion mode duration (in seconds)
+#define MY_INCLUSION_MODE_DURATION 60
+// Digital pin used for inclusion mode button
+//#define MY_INCLUSION_MODE_BUTTON_PIN  3
+
+// Set blinking period
+#define MY_DEFAULT_LED_BLINK_PERIOD 300
+
+// Inverses the behavior of leds
+//#define MY_WITH_LEDS_BLINKING_INVERSE
+
+// Flash leds on rx/tx/err
+// Uncomment to override default HW configurations
+//#define MY_DEFAULT_ERR_LED_PIN 4  // Error led pin
+//#define MY_DEFAULT_RX_LED_PIN  6  // Receive led pin
+//#define MY_DEFAULT_TX_LED_PIN  5  // the PCB, on board LED
+
+#include <MySensors.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
+unsigned long currentMillis;
+bool initialValueSent = false;
+const long SENSORS_READ_FREQUENCY = 60000;
+long lastSensorsReadMillis = -100000000;
+
+//------------- light sensors -----------------//
+/*
+5V - sensor1
+sensor2 - 10kO - analogRead
+10kO - GND
+*/
+
+//IDs starting with 0
+#define H1_ID 0
+#define H1_ANALOG_PIN A0
+MyMessage msgH1(H1_ID, V_LIGHT_LEVEL);
+
+// Enable repeater functionality for this node
+#define MY_REPEATER_FEATURE
+
+//------------- shutter relays -----------------//
+//IDs starting with 10
+
+#define RELAY_ON 0  // GPIO value to write to turn on attached relay
+#define RELAY_OFF 1 // GPIO value to write to turn off attached relay
+#define RELAY_5V_PIN 22
+
+#define M10_ID 10
+#define M10_DOWN_PIN 24
+#define M10_UP_PIN 25
+MyMessage msgM10(M10_ID, V_STATUS);
+
+#define M11_ID 11
+#define M11_DOWN_PIN 26
+#define M11_UP_PIN 27
+MyMessage msgM11(M11_ID, V_STATUS);
+
+#define M12_ID 12
+#define M12_DOWN_PIN 28
+#define M12_UP_PIN 29
+MyMessage msgM12(M12_ID, V_STATUS);
+
+#define M13_ID 13
+#define M13_DOWN_PIN 30
+#define M13_UP_PIN 31
+MyMessage msgM13(M13_ID, V_STATUS);
+
+//------------- relays -----------------//
+//IDs starting with 20
+#define M6_ID 20
+#define M6_PIN 32
+MyMessage msgM6(M6_ID, V_STATUS);
+
+//------------- temperature sensors -----------------//
+//IDs starting with 30
+
+//NTC floor temperature sensors
+/*
+5V - sensor1
+sensor2 - 10kO - analogRead
+10kO - GND
+*/
+#define D1_ID 30
+#define D1_ANALOG_PIN A1
+MyMessage msgD1(D1_ID, V_TEMP);
+#define d1_nominal_resistance 10000       //Nominal resistance at 25⁰C
+#define d1_nominal_temeprature 25   // temperature for nominal resistance (almost always 25⁰ C)
+#define d1_samplingrate 5
+#define d1_beta 3950  // The beta coefficient or the B value of the thermistor (usually 3000-4000) check the datasheet for the accurate value.
+#define d1_Rref 10000   //Value of  resistor used for the voltage divider
+
+//BME280 sensor setup
+/*
+SCK -> SCL (21)
+SDA -> SDA (20)
+*/
+#define ALTITUDE 0
+
+#define D9_ID 31
+Adafruit_BME280 D9_bme; // I2C
+MyMessage msgD9(D9_ID, V_TEMP);
+
+//------------- pressure sensors -----------------//
+//IDs starting with 40
+#define N7_ID 40
+MyMessage msgN7(N7_ID, V_PRESSURE);
+
+//------------- humidity sensors -----------------//
+//IDs starting with 50
+#define C7_ID 50
+MyMessage msgC7(C7_ID, V_HUM);
+
+
+void presentation() {
+  	// Send the sketch version information to the gateway and Controller
+	sendSketchInfo("Domek MEGA Serial", "1.0");
+
+	// Register all sensors to gateway (they will be created as child devices)
+	present(H1_ID, S_LIGHT_LEVEL, "H1");
+
+  present(M10_ID, S_BINARY, "M10");
+  present(M11_ID, S_BINARY, "M11");
+  present(M12_ID, S_BINARY, "M12");
+  present(M13_ID, S_BINARY, "M13");
+
+  present(M6_ID, S_BINARY, "M6");
+
+  present(D1_ID, S_TEMP, "D1");
+
+  present(D9_ID, S_TEMP, "D9");
+
+  present(N7_ID, S_BARO, "N7");
+
+  present(C7_ID, S_HUM, "C7");
+}
+
+void before() {
+  initializeRelays();
+  pinMode(H1_ANALOG_PIN, INPUT);
+  pinMode(D1_ANALOG_PIN, INPUT);
+  initializeBme280Sensors();
+}
+
+void initializeRelays() {
+  //first set the relays off to avoid roller shutters damage
+  pinMode(RELAY_5V_PIN, OUTPUT);
+  digitalWrite(RELAY_5V_PIN, LOW);
+
+  digitalWrite(M10_DOWN_PIN, RELAY_OFF);
+	pinMode(M10_DOWN_PIN, OUTPUT);
+  digitalWrite(M10_UP_PIN, RELAY_OFF);
+	pinMode(M10_UP_PIN, OUTPUT);
+
+  digitalWrite(M11_DOWN_PIN, RELAY_OFF);
+	pinMode(M11_DOWN_PIN, OUTPUT);
+  digitalWrite(M11_UP_PIN, RELAY_OFF);
+	pinMode(M11_UP_PIN, OUTPUT);
+
+  digitalWrite(M12_DOWN_PIN, RELAY_OFF);
+	pinMode(M12_DOWN_PIN, OUTPUT);
+  digitalWrite(M12_UP_PIN, RELAY_OFF);
+	pinMode(M12_UP_PIN, OUTPUT);
+
+  digitalWrite(M13_DOWN_PIN, RELAY_OFF);
+	pinMode(M13_DOWN_PIN, OUTPUT);
+  digitalWrite(M13_UP_PIN, RELAY_OFF);
+	pinMode(M13_UP_PIN, OUTPUT);
+
+  digitalWrite(M6_PIN, RELAY_OFF);
+	pinMode(M6_PIN, OUTPUT);
+
+  delay(20);
+  digitalWrite(RELAY_5V_PIN, HIGH);
+}
+
+void initializeBme280Sensors() {
+  bool status = D9_bme.begin();  
+  status = D9_bme.begin(0x76);  //The I2C address of the sensor I use is 0x76
+  if (!status) {
+      Serial.print("Sensor not working, check connections");
+  }
+}
+
+void loop() {
+  if (!initialValueSent) {
+    setInitialValuesFromController();
+    initialValueSent = true;
+  }
+  if (currentMillis - lastSensorsReadMillis > SENSORS_READ_FREQUENCY) {
+    lastSensorsReadMillis = currentMillis;
+    readLightSensors();
+    readTemperatureSensors();
+    readPressureSensors();
+    readHumiditySensors();
+  }
+}
+
+void receive(const MyMessage &message) {
+  Serial.println("Message received. Type: " + String(message.getType()) + ", device: " + String(message.getSensor()) + ", command: " + String(message.getCommand()) 
+                + ", bool: " + String(message.getBool()));
+	if (message.isAck()) {
+     Serial.println("This is an ack from gateway");
+  }
+  if (message.type == V_STATUS) {
+    Serial.println("Change relay state");
+    if(message.getSensor() == M10_ID) {
+      moveRollerShutter(message.getBool(), M10_DOWN_PIN, M10_UP_PIN, msgM10, "M10");
+    } else if(message.getSensor() == M11_ID) {
+      moveRollerShutter(message.getBool(), M11_DOWN_PIN, M11_UP_PIN, msgM11, "M11");
+    } else if(message.getSensor() == M12_ID) {
+      moveRollerShutter(message.getBool(), M12_DOWN_PIN, M12_UP_PIN, msgM12, "M12");
+    } else if(message.getSensor() == M13_ID) {
+      moveRollerShutter(message.getBool(), M13_DOWN_PIN, M13_UP_PIN, msgM13, "M13");
+    } else if(message.getSensor() == M6_ID) {
+      setRelayValue(message.getBool(), M6_PIN, msgM6, "M6");
+    } else {
+      Serial.println("Unknown device: " + message.getSensor());
+    }
+  }
+}
+
+void moveRollerShutter(boolean state, int pinDown, int pinUp, MyMessage msg, String device) {
+  Serial.println("Moving " + device + " shutter " + state?"UP":"DOWN");
+  if (state) {
+    digitalWrite(pinDown, RELAY_OFF);
+    delay(20);
+    digitalWrite(pinUp, RELAY_ON);
+    send(msg.set(1));
+  } else {
+    digitalWrite(pinUp, RELAY_OFF);
+    delay(20);
+    digitalWrite(pinDown, RELAY_ON);
+    send(msg.set(0));
+  } 
+}
+
+void setRelayValue(boolean state, int pin, MyMessage msg, String device) {
+  Serial.println("Setting " + device + " relay " + state?"ON":"OFF");
+  if (state) {
+    digitalWrite(pin, RELAY_ON);
+    send(msg.set(1));
+  } else {
+    digitalWrite(pin, RELAY_OFF);
+    send(msg.set(0));
+  } 
+}
+
+void setInitialValuesFromController() {
+  Serial.println("Setting initial values from controller");
+  setInitialRelayValue(M10_ID, msgM10);
+  setInitialRelayValue(M11_ID, msgM11);
+  setInitialRelayValue(M12_ID, msgM12);
+  setInitialRelayValue(M13_ID, msgM13);
+
+  setInitialRelayValue(M6_ID, msgM6);
+ 
+  wait(2000, C_SET, V_STATUS);
+}
+
+void setInitialRelayValue(int ID, MyMessage msg) {
+  boolean state = request(ID, V_STATUS);
+  if (state) {
+    send(msg.set(1));
+  } else {
+    send(msg.set(0));
+  }
+}
+
+void readLightSensors() {
+  Serial.println("Reading light sensors values");
+  int16_t h1Value = analogRead(H1_ANALOG_PIN)/10.23;
+  Serial.println("H1 value: " + h1Value);
+  send(msgH1.set(h1Value));
+}
+
+void readTemperatureSensors() {
+  Serial.println("Reading temperature sensors values");
+  readFloorTemperatureSensors();
+  readBme280TemperatureSensors();
+}
+
+void readBme280TemperatureSensors() {
+  String d9Temperature = String(D9_bme.readTemperature(), 1);
+  Serial.print("D9 temperature = ");
+  Serial.print(d9Temperature);
+  Serial.println(" °C");
+  send(msgD9.set(d9Temperature));
+}
+ 
+
+void readFloorTemperatureSensors() {
+  uint8_t i;
+  float average;
+  int samples = 0;
+  for (i = 0; i < d1_samplingrate; i++) {
+    int value = analogRead(D1_ANALOG_PIN);
+    Serial.println(value);
+    samples += value;
+    delay(50);
+  }
+  average = 0;
+  average = samples / d1_samplingrate;
+  average = 1023 / average - 1;
+  average = d1_Rref / average;
+  Serial.print("Thermistor resistance ");
+  Serial.println(average);
+  float temperature;
+  temperature = average / d1_nominal_resistance;     // (R/Ro)
+  temperature = log(temperature);                  // ln(R/Ro)
+  temperature /= d1_beta;                   // 1/B * ln(R/Ro)
+  temperature += 1.0 / (d1_nominal_temeprature + 273.15); // + (1/To)
+  temperature = 1.0 / temperature;                 // Invert
+  temperature -= 273.15;                         // convert absolute temp to C
+  Serial.print("Temperature ");
+  Serial.print(temperature);
+  Serial.println(" *C");
+  send(msgD1.set(temperature,1));
+  int16_t d1Value = analogRead(D1_ANALOG_PIN);
+  Serial.println("D1 value: ");
+  Serial.println(d1Value);
+  send(msgD1.set(d1Value));
+}
+
+void readPressureSensors() {
+  Serial.println("Reading pressure sensors values");
+  readBme280PressureSensors();
+}
+
+void readBme280PressureSensors() {
+  float pressure = D9_bme.readPressure();
+  pressure = D9_bme.seaLevelForAltitude(ALTITUDE, pressure);
+  pressure = pressure/100.0F;
+  String n7Pressure = String(pressure,2);
+  Serial.print(n7Pressure);
+  Serial.println(" hPa");
+  send(msgN7.set(n7Pressure));
+}
+
+void readHumiditySensors() {
+  Serial.println("Reading humidity sensors values");
+  readBme280HumiditySensors();
+}
+
+void readBme280HumiditySensors() {
+  String c7humidity = String(D9_bme.readHumidity(), 0);
+  Serial.print(c7humidity);
+  Serial.println(" %");
+  send(msgC7.set(c7humidity));
+}
