@@ -114,12 +114,23 @@ MyMessage msgH1(H1_ID, V_LIGHT_LEVEL);
 // Enable repeater functionality for this node
 #define MY_REPEATER_FEATURE
 
-//------------- shutter relays -----------------//
-//IDs starting with 10
-
+//------------- relays -----------------//
 #define RELAY_ON 0  // GPIO value to write to turn on attached relay
 #define RELAY_OFF 1 // GPIO value to write to turn off attached relay
 #define RELAY_5V_PIN 22
+
+//IDs starting with 20
+#define M6_ID 20
+#define M6_PIN 32
+MyMessage msgM6(M6_ID, V_STATUS);
+
+
+//------------- roller shutters -----------------//
+//IDs starting with 10
+
+long lastRollerShutterActionStart;
+const long MAX_ROLLER_SHUTTER_OPERATION_DURATION = 20000;
+boolean rollerShuttersInOperation = false;
 
 #define M10_ID 10
 #define M10_DOWN_PIN 24
@@ -141,11 +152,6 @@ MyMessage msgM12(M12_ID, V_STATUS);
 #define M13_UP_PIN 31
 MyMessage msgM13(M13_ID, V_STATUS);
 
-//------------- relays -----------------//
-//IDs starting with 20
-#define M6_ID 20
-#define M6_PIN 32
-MyMessage msgM6(M6_ID, V_STATUS);
 
 //------------- temperature sensors -----------------//
 //IDs starting with 30
@@ -317,31 +323,33 @@ void initializeRelays() {
   pinMode(RELAY_5V_PIN, OUTPUT);
   digitalWrite(RELAY_5V_PIN, LOW);
 
-  digitalWrite(M10_DOWN_PIN, RELAY_OFF);
 	pinMode(M10_DOWN_PIN, OUTPUT);
-  digitalWrite(M10_UP_PIN, RELAY_OFF);
 	pinMode(M10_UP_PIN, OUTPUT);
-
-  digitalWrite(M11_DOWN_PIN, RELAY_OFF);
 	pinMode(M11_DOWN_PIN, OUTPUT);
-  digitalWrite(M11_UP_PIN, RELAY_OFF);
 	pinMode(M11_UP_PIN, OUTPUT);
-
-  digitalWrite(M12_DOWN_PIN, RELAY_OFF);
 	pinMode(M12_DOWN_PIN, OUTPUT);
-  digitalWrite(M12_UP_PIN, RELAY_OFF);
 	pinMode(M12_UP_PIN, OUTPUT);
-
-  digitalWrite(M13_DOWN_PIN, RELAY_OFF);
 	pinMode(M13_DOWN_PIN, OUTPUT);
-  digitalWrite(M13_UP_PIN, RELAY_OFF);
 	pinMode(M13_UP_PIN, OUTPUT);
+  switchOffAllRollerShutters();
 
   digitalWrite(M6_PIN, RELAY_OFF);
 	pinMode(M6_PIN, OUTPUT);
 
   delay(10);
   digitalWrite(RELAY_5V_PIN, HIGH);
+}
+
+void switchOffAllRollerShutters() {
+  rollerShuttersInOperation = false;
+  digitalWrite(M10_DOWN_PIN, RELAY_OFF);
+  digitalWrite(M10_UP_PIN, RELAY_OFF);
+  digitalWrite(M11_DOWN_PIN, RELAY_OFF);
+  digitalWrite(M11_UP_PIN, RELAY_OFF);
+  digitalWrite(M12_DOWN_PIN, RELAY_OFF);
+  digitalWrite(M12_UP_PIN, RELAY_OFF);
+  digitalWrite(M13_DOWN_PIN, RELAY_OFF);
+  digitalWrite(M13_UP_PIN, RELAY_OFF);
 }
 
 void initializeBme280Sensors() {
@@ -375,6 +383,9 @@ void loop() {
     setInitialValuesFromController();
     initialValueSent = true;
   }
+  if (rollerShuttersInOperation && currentMillis - lastRollerShutterActionStart > MAX_ROLLER_SHUTTER_OPERATION_DURATION) {
+    switchOffAllRollerShutters();
+  }
   if (currentMillis - lastSensorsReadMillis > SENSORS_READ_FREQUENCY) {
     lastSensorsReadMillis = currentMillis;
     readLightSensors();
@@ -392,7 +403,8 @@ void loop() {
    if (currentMillis - lastMotionSensorsReadMillis > MOTION_SENSORS_READ_FREQUENCY) {
     lastMotionSensorsReadMillis = currentMillis;
     readMotionSensors();
-  } 
+  }
+
 }
 
 void receive(const MyMessage &message) {
@@ -421,6 +433,8 @@ void receive(const MyMessage &message) {
 
 void moveRollerShutter(boolean state, int pinDown, int pinUp, MyMessage msg, String device) {
   Serial.println("Moving " + device + " shutter " + state?"UP":"DOWN");
+  lastRollerShutterActionStart = currentMillis;
+  rollerShuttersInOperation = true;
   if (state) {
     digitalWrite(pinDown, RELAY_OFF);
     delay(10);
