@@ -156,15 +156,16 @@ MyMessage msgM6(M6_ID, V_STATUS);
 sensor2 - 10kO - analogRead
 10kO - GND
 */
-#define ntc_nominal_resistance 10000       //Nominal resistance at 25⁰C
-#define ntc_nominal_temeprature 25   // temperature for nominal resistance (almost always 25⁰ C)
+#define NTC_NOMINAL_RESISTANCE 10000       //Nominal resistance at 25⁰C
+#define NTC_NOMINAL_TEMPERATURE 25   // temperature for nominal resistance (almost always 25⁰ C)
 #define ntc_samplingrate 10
-#define ntc_beta 3950  // The beta coefficient or the B value of the thermistor (usually 3000-4000) check the datasheet for the accurate value.
-#define ntc_Rref 10000   //Value of  resistor used for the voltage divider
+#define NTC_BETA 3950  // The beta coefficient or the B value of the thermistor (usually 3000-4000) check the datasheet for the accurate value.
+#define NTC_REF_RESISTOR 10000   //Value of  resistor used for the voltage divider
 
 #define D1_ID 30
 #define D1_PIN A1
 MyMessage msgD1(D1_ID, V_TEMP);
+#define FLOOR_HEATER_SAFE_TEMPERATURE_LIMIT 30.0
 
 
 //BME280 sensor setup
@@ -335,7 +336,7 @@ void initializeRelays() {
   digitalWrite(M6_PIN, RELAY_OFF);
 	pinMode(M6_PIN, OUTPUT);
 
-  delay(20);
+  delay(10);
   digitalWrite(RELAY_5V_PIN, HIGH);
 }
 
@@ -381,8 +382,7 @@ void loop() {
    if (currentMillis - lastMotionSensorsReadMillis > MOTION_SENSORS_READ_FREQUENCY) {
     lastMotionSensorsReadMillis = currentMillis;
     readMotionSensors();
-  }
-  
+  } 
 }
 
 void receive(const MyMessage &message) {
@@ -413,12 +413,12 @@ void moveRollerShutter(boolean state, int pinDown, int pinUp, MyMessage msg, Str
   Serial.println("Moving " + device + " shutter " + state?"UP":"DOWN");
   if (state) {
     digitalWrite(pinDown, RELAY_OFF);
-    delay(20);
+    delay(10);
     digitalWrite(pinUp, RELAY_ON);
     send(msg.set(1));
   } else {
     digitalWrite(pinUp, RELAY_OFF);
-    delay(20);
+    delay(10);
     digitalWrite(pinDown, RELAY_ON);
     send(msg.set(0));
   } 
@@ -487,34 +487,40 @@ void readDHT22TemperatureSensors() {
 
 void readFloorTemperatureSensors() {
   uint8_t i;
-  float average;
-  int samples = 0;
+  float d1Average = 0;
+  int d1Reads = 0;
   for (i = 0; i < ntc_samplingrate; i++) {
     int value = analogRead(D1_PIN);
     Serial.print("D1 value read number ");
     Serial.print(i);
     Serial.print(": ");
     Serial.println(value);
-    samples += value;
-    delay(50);
+    d1Reads += value;
+    delay(20);
   }
-  average = 0;
-  average = samples / ntc_samplingrate;
-  average = 1023 / average - 1;
-  average = ntc_Rref / average;
+  d1Average = d1Reads / ntc_samplingrate;
+  d1Average = 1023 / d1Average - 1;
+  d1Average = NTC_REF_RESISTOR / d1Average;
   Serial.print("D1 Thermistor resistance ");
-  Serial.println(average);
-  float temperature;
-  temperature = average / ntc_nominal_resistance;     // (R/Ro)
-  temperature = log(temperature);                  // ln(R/Ro)
-  temperature /= ntc_beta;                   // 1/B * ln(R/Ro)
-  temperature += 1.0 / (ntc_nominal_temeprature + 273.15); // + (1/To)
-  temperature = 1.0 / temperature;                 // Invert
-  temperature -= 273.15;                         // convert absolute temp to C
+  Serial.println(d1Average);
+  float d1Temperature;
+  d1Temperature = d1Average / NTC_NOMINAL_RESISTANCE;     // (R/Ro)
+  d1Temperature = log(d1Temperature);                  // ln(R/Ro)
+  d1Temperature /= NTC_BETA;                   // 1/B * ln(R/Ro)
+  d1Temperature += 1.0 / (NTC_NOMINAL_TEMPERATURE + 273.15); // + (1/To)
+  d1Temperature = 1.0 / d1Temperature;                 // Invert
+  d1Temperature -= 273.15;                         // convert absolute temp to C
   Serial.print("D1 Temperature ");
-  Serial.print(temperature);
+  Serial.print(d1Temperature);
   Serial.println(" °C");
-  send(msgD1.set(temperature,1));
+  send(msgD1.set(d1Temperature,1));
+  safetyCheckForFloorHeater(d1Temperature);
+}
+
+void safetyCheckForFloorHeater(float temperature) {
+  if (temperature > FLOOR_HEATER_SAFE_TEMPERATURE_LIMIT) {
+    setRelayValue(false, M6_PIN, msgM6, "M6");
+  } 
 }
 
 void readPressureSensors() {
@@ -562,12 +568,12 @@ void readContactSensors() {
 
 void readNoiseSensors() {
   Serial.println("Reading noise sensors");
-  int noisySounds = 0;
+  int f2NoisySounds = 0;
   for (int i=1; i<5; i++) {
-    if (digitalRead(F2_PIN)) noisySounds++;
+    if (digitalRead(F2_PIN)) f2NoisySounds++;
     delay(10);
   }
-  boolean f2CurrentState = noisySounds > 3;
+  boolean f2CurrentState = f2NoisySounds > 3;
   if (f2CurrentState != f2State) {
     Serial.println("F2 state changed to: " + f2CurrentState);
     send(msgF2.set(f2CurrentState==HIGH ? 1 : 0));
