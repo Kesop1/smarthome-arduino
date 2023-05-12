@@ -166,6 +166,8 @@ sensor2 - 10kO - analogRead
 #define D1_PIN A1
 MyMessage msgD1(D1_ID, V_TEMP);
 #define FLOOR_HEATER_SAFE_TEMPERATURE_LIMIT 30.0
+#define FLOOR_TEMPERATURE_SENSOR_MIN_VALUE 0.0
+#define FLOOR_TEMPERATURE_SENSOR_MAX_VALUE 50.0
 
 
 //BME280 sensor setup
@@ -178,6 +180,7 @@ SDA -> SDA (20)
 #define D9_ID 31
 Adafruit_BME280 D9_bme; // I2C
 MyMessage msgD9(D9_ID, V_TEMP);
+boolean d9Status;
 
 //DHT22 sensor setup
 /*
@@ -190,6 +193,7 @@ dht D4_DHT22;
 #define D4_ID 32
 #define D4_PIN A3
 MyMessage msgD4(D4_ID, V_TEMP);
+int d4Status;
 
 
 
@@ -341,11 +345,17 @@ void initializeRelays() {
 }
 
 void initializeBme280Sensors() {
-  bool status = D9_bme.begin();  
-  status = D9_bme.begin(0x76);  //The I2C address of the sensor I use is 0x76
-  if (!status) {
-      Serial.print("Sensor not working, check connections");
+  d9Status = D9_bme.begin(0x76);  //The I2C address of the sensor I use is 0x76
+  if (!d9Status) {
+      handleInvalidD9Status();
   }
+}
+
+void handleInvalidD9Status() {
+  Serial.print("D9 Sensor not working, check connections");
+  send(msgD9.set("N/A"));
+  send(msgC7.set("N/A"));
+  send(msgN7.set("N/A"));
 }
 
 void initializeContactSensors() {
@@ -471,17 +481,42 @@ void readTemperatureSensors() {
 }
 
 void readBme280TemperatureSensors() {
-  String d9Temperature = String(D9_bme.readTemperature(), 1);
-  Serial.println("D9 temperature = " + d9Temperature + " °C");
-  send(msgD9.set(d9Temperature));
+  if (!d9Status) {
+    initializeBme280Sensors();
+  } else {
+    String d9Temperature = String(D9_bme.readTemperature(), 1);
+    Serial.println("D9 temperature = " + d9Temperature + " °C");
+    send(msgD9.set(d9Temperature));
+  }
 }
 
 void readDHT22TemperatureSensors() {
-  int d4_chk = D4_DHT22.read22(D4_PIN);
-  Serial.println("D4 sensor status: " + String(d4_chk));
-  String d4Temperature = String(D4_DHT22.temperature, 1);
-  Serial.println("D4 temperature: " + d4Temperature + " °C");
-  send(msgD4.set(d4Temperature));
+  d4Status = D4_DHT22.read22(D4_PIN);
+  if (d4Status != 0) {
+    handleInvalidD4DhtStatus();
+  } else {
+    String d4Temperature = String(D4_DHT22.temperature, 1);
+    Serial.println("D4 temperature: " + d4Temperature + " °C");
+    send(msgD4.set(d4Temperature));
+  }
+}
+
+void handleInvalidD4DhtStatus() {
+  Serial.print("D4 sensor status: " + String(d4Status));
+  String status;
+  switch (d4Status) {
+     case DHTLIB_ERROR_CHECKSUM:
+      status = "DHTLIB_ERROR_CHECKSUM";
+      break;
+    case DHTLIB_ERROR_TIMEOUT:
+      status = "DHTLIB_ERROR_TIMEOUT";
+      break;
+    default:
+      status = "UNKNOWN_ERROR";
+      break;
+  }
+  send(msgD4.set(status));
+  send(msgC2.set(status));
 }
 
 
@@ -513,7 +548,11 @@ void readFloorTemperatureSensors() {
   Serial.print("D1 Temperature ");
   Serial.print(d1Temperature);
   Serial.println(" °C");
-  send(msgD1.set(d1Temperature,1));
+  if (d1Temperature < FLOOR_TEMPERATURE_SENSOR_MIN_VALUE || d1Temperature > FLOOR_TEMPERATURE_SENSOR_MAX_VALUE) {
+    send(msgD1.set("N/A"));
+  } else {
+    send(msgD1.set(d1Temperature,1));
+  }
   safetyCheckForFloorHeater(d1Temperature);
 }
 
@@ -529,6 +568,9 @@ void readPressureSensors() {
 }
 
 void readBme280PressureSensors() {
+  if (!d9Status) {
+    return;
+  }
   float pressure = D9_bme.readPressure();
   pressure = D9_bme.seaLevelForAltitude(ALTITUDE, pressure);
   pressure = pressure/100.0F;
@@ -545,12 +587,18 @@ void readHumiditySensors() {
 }
 
 void readBme280HumiditySensors() {
+  if (!d9Status) {
+    return;
+  }
   String c7humidity = String(D9_bme.readHumidity(), 0);
   Serial.println("C7 humidity: " + c7humidity + " %");
   send(msgC7.set(c7humidity));
 }
 
 void readDHT22HumiditySensors() {
+  if (d4Status != 0) {
+    return;
+  } 
   String c2Humidity = String(D4_DHT22.humidity, 1);
   Serial.println("C2 humidity: " + c2Humidity + " %");
   send(msgC2.set(c2Humidity));
