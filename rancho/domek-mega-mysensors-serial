@@ -201,6 +201,12 @@ dht D4_DHT22;
 MyMessage msgD4(D4_ID, V_TEMP);
 int d4Status;
 
+dht D2_DHT22;
+#define D2_ID 33
+#define D2_PIN A4
+MyMessage msgD2(D2_ID, V_TEMP);
+int d2Status;
+
 
 
 //------------- pressure sensors -----------------//
@@ -217,6 +223,9 @@ MyMessage msgC7(C7_ID, V_HUM);
 
 #define C2_ID 51
 MyMessage msgC2(C2_ID, V_HUM);
+
+#define C1_ID 52
+MyMessage msgC1(C1_ID, V_HUM);
 
 
 
@@ -243,7 +252,7 @@ int g2State = -1;
 4 -> ANALOG DATA
 */
 #define E2_ID 80
-#define E2_PIN A3
+#define E2_PIN A5
 MyMessage msgE2(E2_ID, V_TRIPPED);
 int e2State = -1;
 int waterLeakThresholdValue = 500;
@@ -293,10 +302,14 @@ void presentation() {
 
   present(D1_ID, S_TEMP, "D1");
   present(D9_ID, S_TEMP, "D9");
+  present(D4_ID, S_TEMP, "D4");
+  present(D2_ID, S_TEMP, "D2");
 
   present(N7_ID, S_BARO, "N7");
 
   present(C7_ID, S_HUM, "C7");
+  present(C2_ID, S_HUM, "C2");
+  present(C1_ID, S_HUM, "C1");
 
   present(G2_ID, S_DOOR, "G2");
 
@@ -482,9 +495,7 @@ void setInitialRelayValue(int ID, MyMessage msg) {
 
 void readLightSensors() {
   Serial.println("Reading light sensors values");
-  int16_t h1Value = analogRead(H1_PIN)/10.23;
-  Serial.println("H1 value: " + h1Value);
-  send(msgH1.set(h1Value));
+  sendValidSensorValue(String(analogRead(H1_PIN)/10.23), msgH1, "H1");
 }
 
 void readTemperatureSensors() {
@@ -498,9 +509,7 @@ void readBme280TemperatureSensors() {
   if (!d9Status) {
     initializeBme280Sensors();
   } else {
-    String d9Temperature = String(D9_bme.readTemperature(), 1);
-    Serial.println("D9 temperature = " + d9Temperature + " °C");
-    send(msgD9.set(d9Temperature));
+    sendValidSensorValue(String(D9_bme.readTemperature(), 1), msgD9, "D9");
   }
 }
 
@@ -509,14 +518,36 @@ void readDHT22TemperatureSensors() {
   if (d4Status != 0) {
     handleInvalidD4DhtStatus();
   } else {
-    String d4Temperature = String(D4_DHT22.temperature, 1);
-    Serial.println("D4 temperature: " + d4Temperature + " °C");
-    send(msgD4.set(d4Temperature));
+    sendValidSensorValue(String(D4_DHT22.temperature, 1), msgD4, "D4");
+  }
+  d2Status = D2_DHT22.read22(D2_PIN);
+  if (d2Status != 0) {
+    handleInvalidD2DhtStatus();
+  } else {
+    sendValidSensorValue(String(D2_DHT22.temperature, 1), msgD2, "D2");
   }
 }
 
+void sendValidSensorValue(String value, MyMessage msg, String device) {
+  Serial.println("Sending " + device + " sensor value: " + value);
+  send(msg.set(value));
+}
+
 void handleInvalidD4DhtStatus() {
-  Serial.print("D4 sensor status: " + String(d4Status));
+  String status = getDhtErrorStatus(d4Status);
+  Serial.print("D4 sensor status: " + status);
+  send(msgD4.set(status));
+  send(msgC2.set(status));
+}
+
+void handleInvalidD2DhtStatus() {
+  String status = getDhtErrorStatus(d2Status);
+  Serial.print("D2 sensor status: " + status);
+  send(msgD2.set(status));
+  send(msgC1.set(status));
+}
+
+String getDhtErrorStatus(int statusCode) {
   String status;
   switch (d4Status) {
      case DHTLIB_ERROR_CHECKSUM:
@@ -529,8 +560,7 @@ void handleInvalidD4DhtStatus() {
       status = "UNKNOWN_ERROR";
       break;
   }
-  send(msgD4.set(status));
-  send(msgC2.set(status));
+  return status;
 }
 
 
@@ -585,13 +615,10 @@ void readBme280PressureSensors() {
   if (!d9Status) {
     return;
   }
-  float pressure = D9_bme.readPressure();
-  pressure = D9_bme.seaLevelForAltitude(ALTITUDE, pressure);
-  pressure = pressure/100.0F;
-  String n7Pressure = String(pressure,2);
-  Serial.print("N7 pressure: " + n7Pressure);
-  Serial.println(" hPa");
-  send(msgN7.set(n7Pressure));
+  float n7Pressure = D9_bme.readPressure();
+  n7Pressure = D9_bme.seaLevelForAltitude(ALTITUDE, n7Pressure);
+  n7Pressure = n7Pressure/100.0F;
+  sendValidSensorValue(String(n7Pressure,2), msgN7, "N7");
 }
 
 void readHumiditySensors() {
@@ -604,26 +631,23 @@ void readBme280HumiditySensors() {
   if (!d9Status) {
     return;
   }
-  String c7humidity = String(D9_bme.readHumidity(), 0);
-  Serial.println("C7 humidity: " + c7humidity + " %");
-  send(msgC7.set(c7humidity));
+  sendValidSensorValue(String(D9_bme.readHumidity(), 0), msgC7, "C7");
 }
 
 void readDHT22HumiditySensors() {
-  if (d4Status != 0) {
-    return;
-  } 
-  String c2Humidity = String(D4_DHT22.humidity, 1);
-  Serial.println("C2 humidity: " + c2Humidity + " %");
-  send(msgC2.set(c2Humidity));
+  if (d4Status == 0) {
+    sendValidSensorValue(String(D4_DHT22.humidity, 1), msgC2, "C2");
+  }
+  if (d2Status == 0) {
+    sendValidSensorValue(String(D2_DHT22.humidity, 1), msgC1, "C1");
+  }
 }
 
 void readContactSensors() {
   Serial.println("Reading contact sensors");
   int g2CurrentState = digitalRead(G2_PIN);
   if (g2CurrentState != g2State) {
-    Serial.println("G2 state changed to: " + g2CurrentState);
-    send(msgG2.set(g2CurrentState==HIGH ? 1 : 0));
+    sendValidSensorValue((g2CurrentState==HIGH ? "1" : "0"), msgG2, "G2");
     g2State = g2CurrentState;
   }
 }
@@ -637,8 +661,7 @@ void readNoiseSensors() {
   }
   boolean f2CurrentState = f2NoisySounds > 3;
   if (f2CurrentState != f2State) {
-    Serial.println("F2 state changed to: " + f2CurrentState);
-    send(msgF2.set(f2CurrentState==HIGH ? 1 : 0));
+    sendValidSensorValue((f2CurrentState==HIGH ? "1" : "0"), msgF2, "F2");
     f2State = f2CurrentState;
   }
 }
@@ -647,8 +670,7 @@ void readWaterLeakSensors() {
   Serial.println("Reading water leak sensors");
   int e2CurrentState = analogRead(E2_PIN);
   if (e2CurrentState != e2State) {
-    Serial.println("E2 state changed to: " + e2CurrentState);
-    send(msgE2.set(e2CurrentState==HIGH ? 1 : 0));
+    sendValidSensorValue((e2CurrentState==HIGH ? "1" : "0"), msgE2, "E2");
     e2State = e2CurrentState;
   }
 }
@@ -657,8 +679,7 @@ void readMotionSensors() {
   Serial.println("Reading motion sensors");
   int i1CurrentState = digitalRead(I1_PIN);
   if (i1CurrentState != i1State) {
-    Serial.println("I1 state changed to: " + i1CurrentState);
-    send(msgI1.set(i1CurrentState==HIGH ? 1 : 0));
+    sendValidSensorValue((i1CurrentState==HIGH ? "1" : "0"), msgI1, "I1");
     i1State = i1CurrentState;
   }
 }
