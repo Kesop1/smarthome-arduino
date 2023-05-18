@@ -124,6 +124,22 @@ MyMessage msgH1(H1_ID, V_LIGHT_LEVEL);
 #define M6_PIN 32
 MyMessage msgM6(M6_ID, V_STATUS);
 
+#define M15_ID 21
+#define M15_PIN 33
+MyMessage msgM15(M15_ID, V_STATUS);
+
+#define M8_ID 22
+#define M8_PIN 34
+MyMessage msgM8(M8_ID, V_STATUS);
+
+#define M9_ID 23
+#define M9_PIN 35
+MyMessage msgM9(M9_ID, V_STATUS);
+
+#define M14_ID 24
+#define M14_PIN 36
+MyMessage msgM14(M14_ID, V_STATUS);
+
 
 //------------- roller shutters -----------------//
 //IDs starting with 10
@@ -164,16 +180,22 @@ sensor2 - 10kO - analogRead
 */
 #define NTC_NOMINAL_RESISTANCE 10000       //Nominal resistance at 25⁰C
 #define NTC_NOMINAL_TEMPERATURE 25   // temperature for nominal resistance (almost always 25⁰ C)
-#define ntc_samplingrate 10
+#define NTC_SAMPLING_RATE 10
 #define NTC_BETA 3950  // The beta coefficient or the B value of the thermistor (usually 3000-4000) check the datasheet for the accurate value.
 #define NTC_REF_RESISTOR 10000   //Value of  resistor used for the voltage divider
+
+#define FLOOR_HEATER_SAFE_TEMPERATURE_LIMIT 30.0
+#define FLOOR_TEMPERATURE_SENSOR_MIN_VALUE 0.0
+#define FLOOR_TEMPERATURE_SENSOR_MAX_VALUE 50.0
 
 #define D1_ID 30
 #define D1_PIN A1
 MyMessage msgD1(D1_ID, V_TEMP);
-#define FLOOR_HEATER_SAFE_TEMPERATURE_LIMIT 30.0
-#define FLOOR_TEMPERATURE_SENSOR_MIN_VALUE 0.0
-#define FLOOR_TEMPERATURE_SENSOR_MAX_VALUE 50.0
+
+#define D3_ID 35
+#define D3_PIN A7
+MyMessage msgD3(D3_ID, V_TEMP);
+
 
 
 //BME280 sensor setup
@@ -207,6 +229,18 @@ dht D2_DHT22;
 MyMessage msgD2(D2_ID, V_TEMP);
 int d2Status;
 
+dht D10_DHT22;
+#define D10_ID 34
+#define D10_PIN A6
+MyMessage msgD10(D10_ID, V_TEMP);
+int d10Status;
+
+dht D6_DHT22;
+#define D6_ID 36
+#define D6_PIN A8
+MyMessage msgD6(D6_ID, V_TEMP);
+int d6Status;
+
 
 
 //------------- pressure sensors -----------------//
@@ -227,6 +261,12 @@ MyMessage msgC2(C2_ID, V_HUM);
 #define C1_ID 52
 MyMessage msgC1(C1_ID, V_HUM);
 
+#define C8_ID 53
+MyMessage msgC8(C8_ID, V_HUM);
+
+#define C9_ID 54
+MyMessage msgC9(C9_ID, V_HUM);
+
 
 
 //------------- contact sensors -----------------//
@@ -237,9 +277,24 @@ MyMessage msgC1(C1_ID, V_HUM);
 2 -> DATA
 */
 #define G2_ID 60
-#define G2_PIN 40
+#define G2_PIN A5
 MyMessage msgG2(G2_ID, V_TRIPPED);
 int g2State = -1;
+
+#define G1_ID 61
+#define G1_PIN 50
+MyMessage msgG1(G1_ID, V_TRIPPED);
+int g1State = -1;
+
+#define G5_ID 62
+#define G5_PIN 51
+MyMessage msgG5(G5_ID, V_TRIPPED);
+int g5State = -1;
+
+#define G7_ID 63
+#define G7_PIN 52
+MyMessage msgG7(G7_ID, V_TRIPPED);
+int g7State = -1;
 
 
 
@@ -251,11 +306,27 @@ int g2State = -1;
 2 -> GND
 4 -> ANALOG DATA
 */
+int WATER_LEAK_THRESHOLD_VALUE = 500;
+
 #define E2_ID 80
-#define E2_PIN A5
+#define E2_PIN 40
 MyMessage msgE2(E2_ID, V_TRIPPED);
 int e2State = -1;
-int waterLeakThresholdValue = 500;
+
+#define E4_ID 81
+#define E4_PIN 41
+MyMessage msgE4(E4_ID, V_TRIPPED);
+int e4State = -1;
+
+#define E1_ID 82
+#define E1_PIN 42
+MyMessage msgE1(E1_ID, V_TRIPPED);
+int e1State = -1;
+
+#define E3_ID 83
+#define E3_PIN 43
+MyMessage msgE3(E3_ID, V_TRIPPED);
+int e3State = -1;
 
 
 //------------- noise sensors -----------------//
@@ -268,9 +339,14 @@ int waterLeakThresholdValue = 500;
 4 -> DATA
 */
 #define F2_ID 90
-#define F2_PIN 41
+#define F2_PIN 45
 MyMessage msgF2(F2_ID, V_TRIPPED);
 int f2State = -1;
+
+#define F1_ID 91
+#define F1_PIN 46
+MyMessage msgF1(F1_ID, V_TRIPPED);
+int f1State = -1;
 
 
 //------------- motion sensors -----------------//
@@ -278,9 +354,14 @@ int f2State = -1;
 //sensor setup
 // !!!! make sure to calibrate the sensor !!!!
 #define I1_ID 100
-#define I1_PIN 42
+#define I1_PIN 53
 MyMessage msgI1(I1_ID, V_TRIPPED);
 int i1State = -1;
+
+#define I2_ID 101
+#define I2_PIN 54
+MyMessage msgI2(I2_ID, V_TRIPPED);
+int i2State = -1;
 
 
 
@@ -299,36 +380,56 @@ void presentation() {
   present(M13_ID, S_BINARY, "M13");
 
   present(M6_ID, S_BINARY, "M6");
+  present(M15_ID, S_BINARY, "M15");
+  present(M8_ID, S_BINARY, "M8");
+  present(M9_ID, S_BINARY, "M9");
+  present(M14_ID, S_BINARY, "M14");
 
   present(D1_ID, S_TEMP, "D1");
+  present(D3_ID, S_TEMP, "D3");
   present(D9_ID, S_TEMP, "D9");
   present(D4_ID, S_TEMP, "D4");
   present(D2_ID, S_TEMP, "D2");
+  present(D10_ID, S_TEMP, "D10");
+  present(D6_ID, S_TEMP, "D6");
 
   present(N7_ID, S_BARO, "N7");
 
   present(C7_ID, S_HUM, "C7");
   present(C2_ID, S_HUM, "C2");
   present(C1_ID, S_HUM, "C1");
+  present(C8_ID, S_HUM, "C8");
+  present(C9_ID, S_HUM, "C9");
 
   present(G2_ID, S_DOOR, "G2");
+  present(G1_ID, S_DOOR, "G1");
+  present(G5_ID, S_DOOR, "G5");
+  present(G7_ID, S_DOOR, "G7");
 
   present(E2_ID, S_WATER_LEAK, "E2");
+  present(E4_ID, S_WATER_LEAK, "E4");
+  present(E1_ID, S_WATER_LEAK, "E1");
+  present(E3_ID, S_WATER_LEAK, "E3");
   
   present(F2_ID, S_SOUND, "F2");
+  present(F1_ID, S_SOUND, "F1");
 
   present(I1_ID, S_MOTION, "I1");
+  present(I2_ID, S_MOTION, "I2");
 }
 
 void before() {
   initializeRelays();
   pinMode(H1_PIN, INPUT);
   pinMode(D1_PIN, INPUT);
+  pinMode(D3_PIN, INPUT);
   initializeBme280Sensors();
   initializeContactSensors();
   initializeWaterLeakSensors();
   pinMode(F2_PIN, INPUT);
+  pinMode(F1_PIN, INPUT);
   pinMode(I1_PIN, INPUT);
+  pinMode(I2_PIN, INPUT);
 }
 
 void initializeRelays() {
@@ -348,6 +449,11 @@ void initializeRelays() {
 
   digitalWrite(M6_PIN, RELAY_OFF);
 	pinMode(M6_PIN, OUTPUT);
+  digitalWrite(M15_PIN, RELAY_OFF);
+	pinMode(M15_PIN, OUTPUT);
+	pinMode(M8_PIN, OUTPUT);
+	pinMode(M9_PIN, OUTPUT);
+  pinMode(M14_PIN, OUTPUT);
 
   delay(10);
   digitalWrite(RELAY_5V_PIN, HIGH);
@@ -381,11 +487,17 @@ void handleInvalidD9Status() {
 
 void initializeContactSensors() {
   pinMode(G2_PIN, INPUT);
-  digitalWrite(G2_PIN, HIGH);  
+  pinMode(G1_PIN, INPUT);
+  pinMode(G5_PIN, INPUT);
+  pinMode(G7_PIN, INPUT);
+  // digitalWrite(G2_PIN, HIGH);  
 }
 
 void initializeWaterLeakSensors() {
   pinMode(E2_PIN, INPUT);
+  pinMode(E4_PIN, INPUT);
+  pinMode(E1_PIN, INPUT);
+  pinMode(E3_PIN, INPUT);
 }
 
 
@@ -438,6 +550,14 @@ void receive(const MyMessage &message) {
       moveRollerShutter(message.getBool(), M13_DOWN_PIN, M13_UP_PIN, msgM13, "M13");
     } else if(message.getSensor() == M6_ID) {
       setRelayValue(message.getBool(), M6_PIN, msgM6, "M6");
+    } else if(message.getSensor() == M15_ID) {
+      setRelayValue(message.getBool(), M15_PIN, msgM15, "M15");
+    } else if(message.getSensor() == M8_ID) {
+    setRelayValue(message.getBool(), M8_PIN, msgM8, "M8");
+    } else if(message.getSensor() == M9_ID) {
+    setRelayValue(message.getBool(), M9_PIN, msgM9, "M9");
+    } else if(message.getSensor() == M14_ID) {
+    setRelayValue(message.getBool(), M14_PIN, msgM14, "M14");
     } else {
       Serial.println("Unknown device: " + message.getSensor());
     }
@@ -480,10 +600,17 @@ void setInitialValuesFromController() {
   setInitialRelayValue(M13_ID, msgM13);
 
   setInitialRelayValue(M6_ID, msgM6);
+  setInitialRelayValue(M15_ID, msgM15);
+  setInitialRelayValue(M8_ID, msgM8);
+  setInitialRelayValue(M9_ID, msgM9);
+  setInitialRelayValue(M14_ID, msgM14);
  
   wait(2000, C_SET, V_STATUS);
 }
 
+/**
+  get initial value from serial controller and set it
+*/
 void setInitialRelayValue(int ID, MyMessage msg) {
   boolean state = request(ID, V_STATUS);
   if (state) {
@@ -514,37 +641,26 @@ void readBme280TemperatureSensors() {
 }
 
 void readDHT22TemperatureSensors() {
-  d4Status = D4_DHT22.read22(D4_PIN);
-  if (d4Status != 0) {
-    handleInvalidD4DhtStatus();
+  d4Status = readDHT22TemperatureSensor(D4_DHT22, D4_PIN, msgD4, "D4");
+  d2Status = readDHT22TemperatureSensor(D2_DHT22, D2_PIN, msgD2, "D2");
+  d10Status = readDHT22TemperatureSensor(D10_DHT22, D10_PIN, msgD10, "D10");
+  d6Status = readDHT22TemperatureSensor(D6_DHT22, D6_PIN, msgD6, "D6");
+}
+
+int readDHT22TemperatureSensor(dht DHT22, int pin, MyMessage msg, String device) {
+  int status = DHT22.read22(pin);
+  if (status != DHTLIB_OK) {
+    String statusString = getDhtErrorStatus(status);
+    send(msg.set(statusString));
   } else {
-    sendValidSensorValue(String(D4_DHT22.temperature, 1), msgD4, "D4");
+    sendValidSensorValue(String(DHT22.temperature, 1), msg, device);
   }
-  d2Status = D2_DHT22.read22(D2_PIN);
-  if (d2Status != 0) {
-    handleInvalidD2DhtStatus();
-  } else {
-    sendValidSensorValue(String(D2_DHT22.temperature, 1), msgD2, "D2");
-  }
+  return status;
 }
 
 void sendValidSensorValue(String value, MyMessage msg, String device) {
   Serial.println("Sending " + device + " sensor value: " + value);
   send(msg.set(value));
-}
-
-void handleInvalidD4DhtStatus() {
-  String status = getDhtErrorStatus(d4Status);
-  Serial.print("D4 sensor status: " + status);
-  send(msgD4.set(status));
-  send(msgC2.set(status));
-}
-
-void handleInvalidD2DhtStatus() {
-  String status = getDhtErrorStatus(d2Status);
-  Serial.print("D2 sensor status: " + status);
-  send(msgD2.set(status));
-  send(msgC1.set(status));
 }
 
 String getDhtErrorStatus(int statusCode) {
@@ -567,43 +683,78 @@ String getDhtErrorStatus(int statusCode) {
 void readFloorTemperatureSensors() {
   uint8_t i;
   float d1Average = 0;
-  int d1Reads = 0;
-  for (i = 0; i < ntc_samplingrate; i++) {
-    int value = analogRead(D1_PIN);
+  int d1ReadsSum = 0;
+  float d3Average = 0;
+  int d3ReadsSum = 0;
+  for (i = 0; i < NTC_SAMPLING_RATE; i++) {
+    int d1Value = analogRead(D1_PIN);
     Serial.print("D1 value read number ");
     Serial.print(i);
     Serial.print(": ");
-    Serial.println(value);
-    d1Reads += value;
+    Serial.println(d1Value);
+    d1ReadsSum += d1Value;
+
+    int d3Value = analogRead(D3_PIN);
+    Serial.print("D3 value read number ");
+    Serial.print(i);
+    Serial.print(": ");
+    Serial.println(d3Value);
+    d3ReadsSum += d3Value;
     delay(20);
   }
-  d1Average = d1Reads / ntc_samplingrate;
-  d1Average = 1023 / d1Average - 1;
-  d1Average = NTC_REF_RESISTOR / d1Average;
-  Serial.print("D1 Thermistor resistance ");
-  Serial.println(d1Average);
-  float d1Temperature;
-  d1Temperature = d1Average / NTC_NOMINAL_RESISTANCE;     // (R/Ro)
-  d1Temperature = log(d1Temperature);                  // ln(R/Ro)
-  d1Temperature /= NTC_BETA;                   // 1/B * ln(R/Ro)
-  d1Temperature += 1.0 / (NTC_NOMINAL_TEMPERATURE + 273.15); // + (1/To)
-  d1Temperature = 1.0 / d1Temperature;                 // Invert
-  d1Temperature -= 273.15;                         // convert absolute temp to C
-  Serial.print("D1 Temperature ");
-  Serial.print(d1Temperature);
-  Serial.println(" °C");
-  if (d1Temperature < FLOOR_TEMPERATURE_SENSOR_MIN_VALUE || d1Temperature > FLOOR_TEMPERATURE_SENSOR_MAX_VALUE) {
-    send(msgD1.set("N/A"));
-  } else {
-    send(msgD1.set(d1Temperature,1));
-  }
-  safetyCheckForFloorHeater(d1Temperature);
+  float d1Temperature = getNtcResistorTemperatureFromReadsSum(d1ReadsSum);
+  float d3Temperature = getNtcResistorTemperatureFromReadsSum(d3ReadsSum);
+  sendNtcSensorValue(d1Temperature, msgD1, "D1");
+  sendNtcSensorValue(d3Temperature, msgD3, "D3");
+  
+  safetyCheckForFloorHeater(d1Temperature, M6_PIN, msgM6, "M6");
+  safetyCheckForFloorHeater(d3Temperature, M15_PIN, msgM15, "M15");
 }
 
-void safetyCheckForFloorHeater(float temperature) {
+/**
+  Calculate average temperature value from NTC sensor reads
+*/
+float getNtcResistorTemperatureFromReadsSum(int readsSum) {
+  float average = 0;
+  average = readsSum / NTC_SAMPLING_RATE;
+  average = 1023 / average - 1;
+  average = NTC_REF_RESISTOR / average;
+  Serial.print("NTC Thermistor resistance ");
+  Serial.println(average);
+  float temperature;
+  temperature = average / NTC_NOMINAL_RESISTANCE;     // (R/Ro)
+  temperature = log(temperature);                  // ln(R/Ro)
+  temperature /= NTC_BETA;                   // 1/B * ln(R/Ro)
+  temperature += 1.0 / (NTC_NOMINAL_TEMPERATURE + 273.15); // + (1/To)
+  temperature = 1.0 / temperature;                 // Invert
+  temperature -= 273.15;                         // convert absolute temp to C
+  Serial.print("NTC Temperature ");
+  Serial.print(temperature);
+  Serial.println(" °C");
+  return average;
+}
+
+/**
+  Check if NTC sensro value is above the safety threshold and turn off the related floor heater
+*/
+void safetyCheckForFloorHeater(float temperature, int floorHeaterPin, MyMessage floorHeaterMsg, String floorHeaterDevice) {
   if (temperature > FLOOR_HEATER_SAFE_TEMPERATURE_LIMIT) {
-    setRelayValue(false, M6_PIN, msgM6, "M6");
+    setRelayValue(false, floorHeaterPin, floorHeaterMsg, floorHeaterDevice);
   } 
+}
+
+/**
+  Send the NTC sensor value, check if it is reliable first
+*/
+void sendNtcSensorValue(float value, MyMessage msg, String device) {
+  String valueString;
+  if (value < FLOOR_TEMPERATURE_SENSOR_MIN_VALUE || value > FLOOR_TEMPERATURE_SENSOR_MAX_VALUE) {
+    valueString = "N/A"; 
+    send(msg.set("N/A"));
+  } else {
+    valueString = String(value,1);
+  }
+  sendValidSensorValue(valueString, msg, device);
 }
 
 void readPressureSensors() {
@@ -635,28 +786,43 @@ void readBme280HumiditySensors() {
 }
 
 void readDHT22HumiditySensors() {
-  if (d4Status == 0) {
-    sendValidSensorValue(String(D4_DHT22.humidity, 1), msgC2, "C2");
-  }
-  if (d2Status == 0) {
-    sendValidSensorValue(String(D2_DHT22.humidity, 1), msgC1, "C1");
+  readDHT22HumiditySensor(d4Status, D4_DHT22, msgC2, "C2");
+  readDHT22HumiditySensor(d2Status, D2_DHT22, msgC1, "C1");
+  readDHT22HumiditySensor(d10Status, D10_DHT22, msgC8, "C8");
+  readDHT22HumiditySensor(d6Status, D6_DHT22, msgC9, "C9");
+}
+
+void readDHT22HumiditySensor(int status, dht DHT22, MyMessage msg, String device) {
+  if (status != DHTLIB_OK) {
+    String statusString = getDhtErrorStatus(status);
+    send(msg.set(statusString));
+  } else {
+    sendValidSensorValue(String(DHT22.humidity, 1), msg, device);
   }
 }
 
 void readContactSensors() {
   Serial.println("Reading contact sensors");
-  int g2CurrentState = digitalRead(G2_PIN);
-  if (g2CurrentState != g2State) {
-    sendValidSensorValue((g2CurrentState==HIGH ? "1" : "0"), msgG2, "G2");
-    g2State = g2CurrentState;
-  }
+  g2State = readBinarySensor(g2State, G2_PIN, msgG2, "G2");
+  g1State = readBinarySensor(g1State, G1_PIN, msgG1, "G1");
+  g5State = readBinarySensor(g5State, G5_PIN, msgG5, "G5");
+  g7State = readBinarySensor(g7State, G7_PIN, msgG7, "G7");
+  // int g2CurrentState = digitalRead(G2_PIN);TODO: digitalRead czy analogRead??
+  // if (g2CurrentState != g2State) {
+  //   sendValidSensorValue((g2CurrentState==HIGH ? "1" : "0"), msgG2, "G2");
+  //   g2State = g2CurrentState;
+  // }
 }
+
+
 
 void readNoiseSensors() {
   Serial.println("Reading noise sensors");
   int f2NoisySounds = 0;
+  int f1NoisySounds = 0;
   for (int i=1; i<5; i++) {
     if (digitalRead(F2_PIN)) f2NoisySounds++;
+    if (digitalRead(F1_PIN)) f1NoisySounds++;
     delay(10);
   }
   boolean f2CurrentState = f2NoisySounds > 3;
@@ -664,24 +830,38 @@ void readNoiseSensors() {
     sendValidSensorValue((f2CurrentState==HIGH ? "1" : "0"), msgF2, "F2");
     f2State = f2CurrentState;
   }
+  boolean f1CurrentState = f1NoisySounds > 3;
+  if (f1CurrentState != f1State) {
+    sendValidSensorValue((f1CurrentState==HIGH ? "1" : "0"), msgF1, "F1");
+    f1State = f1CurrentState;
+  }
 }
 
 void readWaterLeakSensors() {
   Serial.println("Reading water leak sensors");
-  int e2CurrentState = analogRead(E2_PIN);
-  if (e2CurrentState != e2State) {
-    sendValidSensorValue((e2CurrentState==HIGH ? "1" : "0"), msgE2, "E2");
-    e2State = e2CurrentState;
+  e2State = readBinarySensor(e2State, E2_PIN, msgE2, "E2");
+  e4State = readBinarySensor(e4State, E4_PIN, msgE4, "E4");
+  e1State = readBinarySensor(e1State, E1_PIN, msgE1, "E1");
+  e3State = readBinarySensor(e3State, E3_PIN, msgE3, "E3");
+}
+
+int readBinarySensor(int previousState, int pin, MyMessage msg, String device) {
+  int currentState = analogRead(pin);
+  if (currentState != previousState) {
+    sendValidSensorValue((currentState==HIGH ? "1" : "0"), msg, device);
   }
+  return currentState;
 }
 
 void readMotionSensors() {
   Serial.println("Reading motion sensors");
-  int i1CurrentState = digitalRead(I1_PIN);
-  if (i1CurrentState != i1State) {
-    sendValidSensorValue((i1CurrentState==HIGH ? "1" : "0"), msgI1, "I1");
-    i1State = i1CurrentState;
-  }
+  i1State = readBinarySensor(i1State, I1_PIN, msgI1, "I1");
+  i2State = readBinarySensor(i2State, I2_PIN, msgI2, "I2");
+  // int i1CurrentState = digitalRead(I1_PIN); digitalRead czy analogRead??
+  // if (i1CurrentState != i1State) {
+  //   sendValidSensorValue((i1CurrentState==HIGH ? "1" : "0"), msgI1, "I1");
+  //   i1State = i1CurrentState;
+  // }
 }
 
 
