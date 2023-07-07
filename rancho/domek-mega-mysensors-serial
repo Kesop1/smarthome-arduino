@@ -108,7 +108,7 @@ sensor2 - 10kO - analogRead
 
 //IDs starting with 0
 #define H1_ID 0
-#define H1_PIN A0
+#define H1_PIN 50
 MyMessage msgH1(H1_ID, V_LIGHT_LEVEL);
 
 // Enable repeater functionality for this node
@@ -117,40 +117,36 @@ MyMessage msgH1(H1_ID, V_LIGHT_LEVEL);
 //------------- relays -----------------//
 #define RELAY_ON 0  // GPIO value to write to turn on attached relay
 #define RELAY_OFF 1 // GPIO value to write to turn off attached relay
-#define RELAY_5V_PIN 22
+#define RELAY_5V_PIN 6
 
 //IDs starting with 20
 #define M6_ID 20
-#define M6_PIN 32
+#define M6_PIN 41
 MyMessage msgM6(M6_ID, V_STATUS);
 
 #define M15_ID 21
-#define M15_PIN 33
+#define M15_PIN 7
 MyMessage msgM15(M15_ID, V_STATUS);
 
 #define M8_ID 22
-#define M8_PIN 34
+#define M8_PIN 9
 MyMessage msgM8(M8_ID, V_STATUS);
 
 #define M9_ID 23
-#define M9_PIN 35
+#define M9_PIN 8
 MyMessage msgM9(M9_ID, V_STATUS);
-
-#define M14_ID 24
-#define M14_PIN 36
-MyMessage msgM14(M14_ID, V_STATUS);
 
 
 //------------- roller shutters -----------------//
 //IDs starting with 10
 
 long lastRollerShutterActionStart;
-const long MAX_ROLLER_SHUTTER_OPERATION_DURATION = 20000;
+const long MAX_ROLLER_SHUTTER_OPERATION_DURATION = 25000;
 boolean rollerShuttersInOperation = false;
 
 #define M10_ID 10
-#define M10_DOWN_PIN 24
-#define M10_UP_PIN 25
+#define M10_DOWN_PIN 23
+#define M10_UP_PIN 22
 MyMessage msgM10(M10_ID, V_STATUS);
 
 #define M11_ID 11
@@ -159,13 +155,13 @@ MyMessage msgM10(M10_ID, V_STATUS);
 MyMessage msgM11(M11_ID, V_STATUS);
 
 #define M12_ID 12
-#define M12_DOWN_PIN 28
-#define M12_UP_PIN 29
+#define M12_DOWN_PIN 24
+#define M12_UP_PIN 25
 MyMessage msgM12(M12_ID, V_STATUS);
 
 #define M13_ID 13
-#define M13_DOWN_PIN 30
-#define M13_UP_PIN 31
+#define M13_DOWN_PIN 29
+#define M13_UP_PIN 28
 MyMessage msgM13(M13_ID, V_STATUS);
 
 
@@ -185,65 +181,55 @@ sensor2 - 10kO - analogRead
 #define NTC_REF_RESISTOR 10000   //Value of  resistor used for the voltage divider
 
 #define FLOOR_HEATER_SAFE_TEMPERATURE_LIMIT 30.0
-#define FLOOR_TEMPERATURE_SENSOR_MIN_VALUE 0.0
-#define FLOOR_TEMPERATURE_SENSOR_MAX_VALUE 50.0
+#define FLOOR_HEATER_SAFE_TEMPERATURE_COOLDOWN_TEMP 28.0
+#define FLOOR_TEMPERATURE_SENSOR_MIN_VALID_VALUE 0.0
+#define FLOOR_TEMPERATURE_SENSOR_MAX_VALID_VALUE 50.0
 
 #define D1_ID 30
-#define D1_PIN A1
+#define D1_PIN 40
 MyMessage msgD1(D1_ID, V_TEMP);
+boolean turnD1RelatedFloorHeaterOnAfterCooldown = false;
 
 #define D3_ID 35
-#define D3_PIN A7
+#define D3_PIN 46
 MyMessage msgD3(D3_ID, V_TEMP);
+boolean turnD3RelatedFloorHeaterOnAfterCooldown = false;
 
-
-
-// //BME280 sensor setup
-// /*
-// SCK -> SCL (21)
-// SDA -> SDA (20)
-// */
-// #define ALTITUDE 0
-
-// #define D9_ID 31
-// Adafruit_BME280 D9_bme; // I2C
-// MyMessage msgD9(D9_ID, V_TEMP);
-// boolean d9Status;
 
 //DHT22 sensor setup
 /*
 1- > 5V
-2 -> 5V + 10kO - DATA
+2 -> 10kO -5V - DATA
 3 -> 
 4 -> GND
 */
 dht D4_DHT22;
 #define D4_ID 32
-#define D4_PIN A3
+#define D4_PIN 3
 MyMessage msgD4(D4_ID, V_TEMP);
 int d4Status;
 
 dht D2_DHT22;
 #define D2_ID 33
-#define D2_PIN A4
+#define D2_PIN 38
 MyMessage msgD2(D2_ID, V_TEMP);
 int d2Status;
 
 dht D10_DHT22;
 #define D10_ID 34
-#define D10_PIN A6
+#define D10_PIN 39
 MyMessage msgD10(D10_ID, V_TEMP);
 int d10Status;
 
 dht D6_DHT22;
 #define D6_ID 36
-#define D6_PIN A8
+#define D6_PIN 5
 MyMessage msgD6(D6_ID, V_TEMP);
 int d6Status;
 
 dht D9_DHT22;
 #define D9_ID 31
-#define D9_PIN A9
+#define D9_PIN 13
 MyMessage msgD9(D9_ID, V_TEMP);
 int d9Status;
 
@@ -282,22 +268,22 @@ MyMessage msgC9(C9_ID, V_HUM);
 2 -> DATA
 */
 #define G2_ID 60
-#define G2_PIN A5
+#define G2_PIN 11
 MyMessage msgG2(G2_ID, V_TRIPPED);
 int g2State = -1;
 
 #define G1_ID 61
-#define G1_PIN 50
+#define G1_PIN 15
 MyMessage msgG1(G1_ID, V_TRIPPED);
 int g1State = -1;
 
 #define G5_ID 62
-#define G5_PIN 51
+#define G5_PIN 52 //// ex16
 MyMessage msgG5(G5_ID, V_TRIPPED);
 int g5State = -1;
 
 #define G7_ID 63
-#define G7_PIN 52
+#define G7_PIN 48
 MyMessage msgG7(G7_ID, V_TRIPPED);
 int g7State = -1;
 
@@ -314,22 +300,17 @@ int g7State = -1;
 int WATER_LEAK_THRESHOLD_VALUE = 500;
 
 #define E2_ID 80
-#define E2_PIN 40
+#define E2_PIN 47
 MyMessage msgE2(E2_ID, V_TRIPPED);
 int e2State = -1;
 
-#define E4_ID 81
-#define E4_PIN 41
-MyMessage msgE4(E4_ID, V_TRIPPED);
-int e4State = -1;
-
 #define E1_ID 82
-#define E1_PIN 42
+#define E1_PIN 44
 MyMessage msgE1(E1_ID, V_TRIPPED);
 int e1State = -1;
 
 #define E3_ID 83
-#define E3_PIN 43
+#define E3_PIN 51   ////// ex 14
 MyMessage msgE3(E3_ID, V_TRIPPED);
 int e3State = -1;
 
@@ -344,12 +325,12 @@ int e3State = -1;
 4 -> DATA
 */
 #define F2_ID 90
-#define F2_PIN 45
+#define F2_PIN 37
 MyMessage msgF2(F2_ID, V_TRIPPED);
 int f2State = -1;
 
 #define F1_ID 91
-#define F1_PIN 46
+#define F1_PIN 12
 MyMessage msgF1(F1_ID, V_TRIPPED);
 int f1State = -1;
 
@@ -359,12 +340,12 @@ int f1State = -1;
 //sensor setup
 // !!!! make sure to calibrate the sensor !!!!
 #define I1_ID 100
-#define I1_PIN 53
+#define I1_PIN 45
 MyMessage msgI1(I1_ID, V_TRIPPED);
 int i1State = -1;
 
 #define I2_ID 101
-#define I2_PIN 54
+#define I2_PIN 10
 MyMessage msgI2(I2_ID, V_TRIPPED);
 int i2State = -1;
 
@@ -388,7 +369,6 @@ void presentation() {
   present(M15_ID, S_BINARY, "M15");
   present(M8_ID, S_BINARY, "M8");
   present(M9_ID, S_BINARY, "M9");
-  present(M14_ID, S_BINARY, "M14");
 
   present(D1_ID, S_TEMP, "D1");
   present(D3_ID, S_TEMP, "D3");
@@ -412,7 +392,6 @@ void presentation() {
   present(G7_ID, S_DOOR, "G7");
 
   present(E2_ID, S_WATER_LEAK, "E2");
-  present(E4_ID, S_WATER_LEAK, "E4");
   present(E1_ID, S_WATER_LEAK, "E1");
   present(E3_ID, S_WATER_LEAK, "E3");
   
@@ -428,6 +407,7 @@ void before() {
   pinMode(H1_PIN, INPUT);
   pinMode(D1_PIN, INPUT);
   pinMode(D3_PIN, INPUT);
+  initializeDhtSensors();
   // initializeBme280Sensors();
   initializeContactSensors();
   initializeWaterLeakSensors();
@@ -458,7 +438,6 @@ void initializeRelays() {
 	pinMode(M15_PIN, OUTPUT);
 	pinMode(M8_PIN, OUTPUT);
 	pinMode(M9_PIN, OUTPUT);
-  pinMode(M14_PIN, OUTPUT);
 
   delay(10);
   digitalWrite(RELAY_5V_PIN, HIGH);
@@ -476,19 +455,13 @@ void switchOffAllRollerShutters() {
   digitalWrite(M13_UP_PIN, RELAY_OFF);
 }
 
-// void initializeBme280Sensors() {
-//   d9Status = D9_bme.begin(0x76);  //The I2C address of the sensor I use is 0x76
-//   if (!d9Status) {
-//       handleInvalidD9Status();
-//   }
-// }
-
-// void handleInvalidD9Status() {
-//   Serial.print("D9 Sensor not working, check connections");
-//   send(msgD9.set("N/A"));
-//   send(msgC7.set("N/A"));
-//   send(msgN7.set("N/A"));
-// }
+void initializeDhtSensors() {
+  pinMode(D6_PIN, INPUT);
+  pinMode(D9_PIN, INPUT);
+  pinMode(D4_PIN, INPUT);
+  pinMode(D2_PIN, INPUT);
+  pinMode(D10_PIN, INPUT);
+}
 
 void initializeContactSensors() {
   pinMode(G2_PIN, INPUT);
@@ -500,7 +473,6 @@ void initializeContactSensors() {
 
 void initializeWaterLeakSensors() {
   pinMode(E2_PIN, INPUT);
-  pinMode(E4_PIN, INPUT);
   pinMode(E1_PIN, INPUT);
   pinMode(E3_PIN, INPUT);
 }
@@ -519,9 +491,8 @@ void loop() {
   if (currentMillis - lastSensorsReadMillis > SENSORS_READ_FREQUENCY) {
     lastSensorsReadMillis = currentMillis;
     readLightSensors();
-    readTemperatureSensors();
-    // readPressureSensors();
-    readHumiditySensors();
+    readDHT22Sensors();
+    readFloorTemperatureSensors();
     readWaterLeakSensors();
   }
   if (currentMillis - lastSecuritySensorsReadMillis > SECURITY_SENSORS_READ_FREQUENCY) {
@@ -534,7 +505,6 @@ void loop() {
     lastMotionSensorsReadMillis = currentMillis;
     readMotionSensors();
   }
-
 }
 
 void receive(const MyMessage &message) {
@@ -555,14 +525,14 @@ void receive(const MyMessage &message) {
       moveRollerShutter(message.getBool(), M13_DOWN_PIN, M13_UP_PIN, msgM13, "M13");
     } else if(message.getSensor() == M6_ID) {
       setRelayValue(message.getBool(), M6_PIN, msgM6, "M6");
+      turnD1RelatedFloorHeaterOnAfterCooldown = message.getBool();
     } else if(message.getSensor() == M15_ID) {
       setRelayValue(message.getBool(), M15_PIN, msgM15, "M15");
+      turnD3RelatedFloorHeaterOnAfterCooldown = message.getBool();
     } else if(message.getSensor() == M8_ID) {
     setRelayValue(message.getBool(), M8_PIN, msgM8, "M8");
     } else if(message.getSensor() == M9_ID) {
     setRelayValue(message.getBool(), M9_PIN, msgM9, "M9");
-    } else if(message.getSensor() == M14_ID) {
-    setRelayValue(message.getBool(), M14_PIN, msgM14, "M14");
     } else {
       Serial.println("Unknown device: " + message.getSensor());
     }
@@ -608,7 +578,6 @@ void setInitialValuesFromController() {
   setInitialRelayValue(M15_ID, msgM15);
   setInitialRelayValue(M8_ID, msgM8);
   setInitialRelayValue(M9_ID, msgM9);
-  setInitialRelayValue(M14_ID, msgM14);
  
   wait(2000, C_SET, V_STATUS);
 }
@@ -630,40 +599,37 @@ void readLightSensors() {
   sendValidSensorFloatValue(analogRead(H1_PIN)/10.23, msgH1, "H1");
 }
 
-void readTemperatureSensors() {
-  Serial.println("Reading temperature sensors values");
-  readFloorTemperatureSensors();
-  // readBme280TemperatureSensors();
-  readDHT22TemperatureSensors();
+void readDHT22Sensors() {
+  Serial.println("Reading DHT22 temperature and humidity sensors values");
+  d4Status = readDHT22Sensor(D4_DHT22, D4_PIN, msgD4, "D4", msgC2, "C2", d4Status);
+  d2Status = readDHT22Sensor(D2_DHT22, D2_PIN, msgD2, "D2", msgC1, "C1", d2Status);
+  d10Status = readDHT22Sensor(D10_DHT22, D10_PIN, msgD10, "D10", msgC8, "C8", d10Status);
+  d6Status = readDHT22Sensor(D6_DHT22, D6_PIN, msgD6, "D6", msgC9, "C9", d6Status);
+  d9Status = readDHT22Sensor(D9_DHT22, D9_PIN, msgD9, "D9", msgC7, "C7", d9Status);
 }
 
-// void readBme280TemperatureSensors() {
-//   if (!d9Status) {
-//     initializeBme280Sensors();
-//   } else {
-//     sendValidSensorValue(String(D9_bme.readTemperature(), 1), msgD9, "D9");
-//   }
-// }
-
-void readDHT22TemperatureSensors() {
-  Serial.println("Reading DHT22 temperature sensors values");
-  d4Status = readDHT22TemperatureSensor(D4_DHT22, D4_PIN, msgD4, "D4");
-  d2Status = readDHT22TemperatureSensor(D2_DHT22, D2_PIN, msgD2, "D2");
-  d10Status = readDHT22TemperatureSensor(D10_DHT22, D10_PIN, msgD10, "D10");
-  d6Status = readDHT22TemperatureSensor(D6_DHT22, D6_PIN, msgD6, "D6");
-  d9Status = readDHT22TemperatureSensor(D9_DHT22, D9_PIN, msgD9, "D9");
-}
-
-int readDHT22TemperatureSensor(dht DHT22, int pin, MyMessage &msg, String device) {
-  int status = DHT22.read22(pin);
+/**
+  DHT22 sensors need some time to gather read-outs, that's why we command it to read current values but return previous values.
+  If the sensor returns 0.0 temp and 0.0 humidity it means that no read command was sent yet to it, so send it but don't return anything.
+  returns DHT22 sensor status
+*/
+int readDHT22Sensor(dht &DHT22, int pin, MyMessage &msgTemp, String deviceTemp, MyMessage &msgHum, String deviceHum, int status) {
+  Serial.println("Previous DHT22 temperature " + deviceTemp + ": " + DHT22.temperature + " and humidity " + deviceHum + ": " + DHT22.humidity + " sensors values");
   if (status != DHTLIB_OK) {
     String statusString = getDhtErrorStatus(status);
-    Serial.println(device + " status invalid: " + statusString);
-    send(msg.set(statusString.c_str()));
+    Serial.println(deviceTemp + " status invalid: " + statusString);
+    send(msgTemp.set(statusString.c_str()));
+    send(msgHum.set(statusString.c_str()));
   } else {
-    sendValidSensorFloatValue(DHT22.temperature, msg, device);
+    if (DHT22.temperature<1.0 && DHT22.humidity<1.0) {
+      Serial.println("No sensor values read yet");
+    } else {
+      sendValidSensorFloatValue(DHT22.temperature, msgTemp, deviceTemp);
+      sendValidSensorFloatValue(DHT22.humidity, msgHum, deviceHum);
+    }
   }
-  return status;
+  Serial.println("Reading new DHT22 temperature " + deviceTemp + " and humidity " + deviceHum + " sensors values");
+  return DHT22.read22(pin);
 }
 
 void sendValidSensorFloatValue(float value, MyMessage &msg, String device) {
@@ -720,6 +686,9 @@ void readFloorTemperatureSensors() {
   float d3Temperature = getNtcResistorTemperatureFromReadsSum(d3ReadsSum);
   sendNtcSensorValue(d1Temperature, msgD1, "D1");
   sendNtcSensorValue(d3Temperature, msgD3, "D3");
+
+  if (turnD1RelatedFloorHeaterOnAfterCooldown) turnOnFloorHeaterIfNeeded(d1Temperature, M6_PIN, "M6");
+  if (turnD3RelatedFloorHeaterOnAfterCooldown) turnOnFloorHeaterIfNeeded(d3Temperature, M15_PIN, "M15");
   
   safetyCheckForFloorHeater(d1Temperature, M6_PIN, msgM6, "M6");
   safetyCheckForFloorHeater(d3Temperature, M15_PIN, msgM15, "M15");
@@ -751,11 +720,21 @@ float getNtcResistorTemperatureFromReadsSum(int readsSum) {
 /**
   Check if NTC sensor value is above the safety threshold and turn off the related floor heater
 */
-void safetyCheckForFloorHeater(float temperature, int floorHeaterPin, MyMessage floorHeaterMsg, String floorHeaterDevice) {
+void safetyCheckForFloorHeater(float temperature, int floorHeaterPin, MyMessage &floorHeaterMsg, String floorHeaterDevice) {
   if (temperature > FLOOR_HEATER_SAFE_TEMPERATURE_LIMIT) {
     Serial.println("Switching off floor heater " + floorHeaterDevice + ". NTC sensor shows safety temperature reached: " + temperature);
     setRelayValue(false, floorHeaterPin, floorHeaterMsg, floorHeaterDevice);
-  } 
+  }
+}
+
+/**
+  Check if NTC sensor value is reliable and below the cooldown temp threshold and turn on the related floor heater if requested
+*/
+void turnOnFloorHeaterIfNeeded(float temperature, int floorHeaterPin, String floorHeaterDevice) {
+  if (temperature > FLOOR_TEMPERATURE_SENSOR_MIN_VALID_VALUE && temperature < FLOOR_HEATER_SAFE_TEMPERATURE_COOLDOWN_TEMP) {
+    Serial.println("Switching on floor heater " + floorHeaterDevice + ". NTC sensor shows safety temperature fell below " + FLOOR_HEATER_SAFE_TEMPERATURE_COOLDOWN_TEMP);
+    digitalWrite(floorHeaterPin, RELAY_ON);
+  }
 }
 
 /**
@@ -763,56 +742,11 @@ void safetyCheckForFloorHeater(float temperature, int floorHeaterPin, MyMessage 
 */
 void sendNtcSensorValue(float value, MyMessage &msg, String device) {
   Serial.println(device + " NTC sensor value: " + value);
-  if (value < FLOOR_TEMPERATURE_SENSOR_MIN_VALUE || value > FLOOR_TEMPERATURE_SENSOR_MAX_VALUE) {
+  if (value < FLOOR_TEMPERATURE_SENSOR_MIN_VALID_VALUE || value > FLOOR_TEMPERATURE_SENSOR_MAX_VALID_VALUE) {
     Serial.println(device + " NTC sensor is unreliable");
     send(msg.set("N/A"));
   } else {
     sendValidSensorFloatValue(value, msg, device);
-  }
-}
-
-// void readPressureSensors() {
-//   Serial.println("Reading pressure sensors values");
-//   readBme280PressureSensors();
-// }
-
-// void readBme280PressureSensors() {
-//   if (!d9Status) {
-//     return;
-//   }
-//   float n7Pressure = D9_bme.readPressure();
-//   n7Pressure = D9_bme.seaLevelForAltitude(ALTITUDE, n7Pressure);
-//   n7Pressure = n7Pressure/100.0F;
-//   sendValidSensorValue(String(n7Pressure,2), msgN7, "N7");
-// }
-
-void readHumiditySensors() {
-  Serial.println("Reading humidity sensors values");
-  // readBme280HumiditySensors();
-  readDHT22HumiditySensors();
-}
-
-// void readBme280HumiditySensors() {
-//   if (!d9Status) {
-//     return;
-//   }
-//   sendValidSensorValue(String(D9_bme.readHumidity(), 0), msgC7, "C7");
-// }
-
-void readDHT22HumiditySensors() {
-  readDHT22HumiditySensor(d4Status, D4_DHT22, msgC2, "C2");
-  readDHT22HumiditySensor(d2Status, D2_DHT22, msgC1, "C1");
-  readDHT22HumiditySensor(d10Status, D10_DHT22, msgC8, "C8");
-  readDHT22HumiditySensor(d6Status, D6_DHT22, msgC9, "C9");
-  readDHT22HumiditySensor(d9Status, D9_DHT22, msgC7, "C7");
-}
-
-void readDHT22HumiditySensor(int status, dht DHT22, MyMessage &msg, String device) {
-  if (status != DHTLIB_OK) {
-    String statusString = getDhtErrorStatus(status);
-    send(msg.set(statusString.c_str()));
-  } else {
-    sendValidSensorFloatValue(DHT22.humidity, msg, device);
   }
 }
 
@@ -855,7 +789,6 @@ void readNoiseSensors() {
 void readWaterLeakSensors() {
   Serial.println("Reading water leak sensors");
   e2State = readBinarySensor(e2State, E2_PIN, msgE2, "E2");
-  e4State = readBinarySensor(e4State, E4_PIN, msgE4, "E4");
   e1State = readBinarySensor(e1State, E1_PIN, msgE1, "E1");
   e3State = readBinarySensor(e3State, E3_PIN, msgE3, "E3");
 }
@@ -880,3 +813,55 @@ void readMotionSensors() {
 }
 
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// //BME280 sensor setup
+// /*
+// SCK -> SCL (21)
+// SDA -> SDA (20)
+// */
+// #define ALTITUDE 0
+
+// #define D9_ID 31
+// Adafruit_BME280 D9_bme; // I2C
+// MyMessage msgD9(D9_ID, V_TEMP);
+// boolean d9Status;
+
+// void initializeBme280Sensors() {
+//   d9Status = D9_bme.begin(0x76);  //The I2C address of the sensor I use is 0x76
+//   if (!d9Status) {
+//       handleInvalidD9Status();
+//   }
+// }
+
+// void readBme280TemperatureSensors() {
+//   if (!d9Status) {
+//     initializeBme280Sensors();
+//   } else {
+//     sendValidSensorValue(String(D9_bme.readTemperature(), 1), msgD9, "D9");
+//   }
+// }
+
+// void readPressureSensors() {
+//   Serial.println("Reading pressure sensors values");
+//   readBme280PressureSensors();
+// }
+
+// void readBme280PressureSensors() {
+//   if (!d9Status) {
+//     return;
+//   }
+//   float n7Pressure = D9_bme.readPressure();
+//   n7Pressure = D9_bme.seaLevelForAltitude(ALTITUDE, n7Pressure);
+//   n7Pressure = n7Pressure/100.0F;
+//   sendValidSensorValue(String(n7Pressure,2), msgN7, "N7");
+// }
+
+// void readBme280HumiditySensors() {
+//   if (!d9Status) {
+//     return;
+//   }
+//   sendValidSensorValue(String(D9_bme.readHumidity(), 0), msgC7, "C7");
+// }
