@@ -85,18 +85,19 @@
 
 #include <MySensors.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
-#include <dht.h>
+//#include <Adafruit_BME280.h>
+#include <dht.h> //DHTlib
+
 
 unsigned long currentMillis;
 bool initialValueSent = false;
 const long SENSORS_READ_FREQUENCY = 60000;
 long lastSensorsReadMillis = -100000000;
 
-const long SECURITY_SENSORS_READ_FREQUENCY = 3000;
+const long SECURITY_SENSORS_READ_FREQUENCY = 300000;////
 long lastSecuritySensorsReadMillis = -100000000;
 
-const long MOTION_SENSORS_READ_FREQUENCY = 1000;
+const long MOTION_SENSORS_READ_FREQUENCY = 100000;/////
 long lastMotionSensorsReadMillis = -100000000;
 
 //------------- light sensors -----------------//
@@ -121,7 +122,7 @@ MyMessage msgH1(H1_ID, V_LIGHT_LEVEL);
 
 //IDs starting with 20
 #define M6_ID 20
-#define M6_PIN 41
+#define M6_PIN 42
 MyMessage msgM6(M6_ID, V_STATUS);
 
 #define M15_ID 21
@@ -136,6 +137,9 @@ MyMessage msgM8(M8_ID, V_STATUS);
 #define M9_PIN 8
 MyMessage msgM9(M9_ID, V_STATUS);
 
+#define M16_ID 24
+#define M16_PIN 10
+MyMessage msgM16(M16_ID, V_STATUS);
 
 //------------- roller shutters -----------------//
 //IDs starting with 10
@@ -186,12 +190,12 @@ sensor2 - 10kO - analogRead
 #define FLOOR_TEMPERATURE_SENSOR_MAX_VALID_VALUE 50.0
 
 #define D1_ID 30
-#define D1_PIN 40
+#define D1_PIN 69 //A15
 MyMessage msgD1(D1_ID, V_TEMP);
 boolean turnD1RelatedFloorHeaterOnAfterCooldown = false;
 
 #define D3_ID 35
-#define D3_PIN 46
+#define D3_PIN 68 //A14
 MyMessage msgD3(D3_ID, V_TEMP);
 boolean turnD3RelatedFloorHeaterOnAfterCooldown = false;
 
@@ -345,7 +349,7 @@ MyMessage msgI1(I1_ID, V_TRIPPED);
 int i1State = -1;
 
 #define I2_ID 101
-#define I2_PIN 10
+#define I2_PIN 46
 MyMessage msgI2(I2_ID, V_TRIPPED);
 int i2State = -1;
 
@@ -354,11 +358,11 @@ int i2State = -1;
 
 
 void presentation() {
-  	// Send the sketch version information to the gateway and Controller
-	sendSketchInfo("Domek MEGA Serial", "1.0");
+    // Send the sketch version information to the gateway and Controller
+  sendSketchInfo("Domek MEGA Serial", "1.0");
 
-	// Register all sensors to gateway (they will be created as child devices)
-	present(H1_ID, S_LIGHT_LEVEL, "H1");
+  // Register all sensors to gateway (they will be created as child devices)
+  present(H1_ID, S_LIGHT_LEVEL, "H1");
 
   present(M10_ID, S_BINARY, "M10");
   present(M11_ID, S_BINARY, "M11");
@@ -369,6 +373,7 @@ void presentation() {
   present(M15_ID, S_BINARY, "M15");
   present(M8_ID, S_BINARY, "M8");
   present(M9_ID, S_BINARY, "M9");
+  present(M16_ID, S_BINARY, "M16");
 
   present(D1_ID, S_TEMP, "D1");
   present(D3_ID, S_TEMP, "D3");
@@ -422,22 +427,26 @@ void initializeRelays() {
   pinMode(RELAY_5V_PIN, OUTPUT);
   digitalWrite(RELAY_5V_PIN, LOW);
 
-	pinMode(M10_DOWN_PIN, OUTPUT);
-	pinMode(M10_UP_PIN, OUTPUT);
-	pinMode(M11_DOWN_PIN, OUTPUT);
-	pinMode(M11_UP_PIN, OUTPUT);
-	pinMode(M12_DOWN_PIN, OUTPUT);
-	pinMode(M12_UP_PIN, OUTPUT);
-	pinMode(M13_DOWN_PIN, OUTPUT);
-	pinMode(M13_UP_PIN, OUTPUT);
+  pinMode(M10_DOWN_PIN, OUTPUT);
+  pinMode(M10_UP_PIN, OUTPUT);
+  pinMode(M11_DOWN_PIN, OUTPUT);
+  pinMode(M11_UP_PIN, OUTPUT);
+  pinMode(M12_DOWN_PIN, OUTPUT);
+  pinMode(M12_UP_PIN, OUTPUT);
+  pinMode(M13_DOWN_PIN, OUTPUT);
+  pinMode(M13_UP_PIN, OUTPUT);
   switchOffAllRollerShutters();
 
   digitalWrite(M6_PIN, RELAY_OFF);
-	pinMode(M6_PIN, OUTPUT);
+  pinMode(M6_PIN, OUTPUT);
   digitalWrite(M15_PIN, RELAY_OFF);
-	pinMode(M15_PIN, OUTPUT);
-	pinMode(M8_PIN, OUTPUT);
-	pinMode(M9_PIN, OUTPUT);
+  pinMode(M15_PIN, OUTPUT);
+  digitalWrite(M8_PIN, RELAY_ON);
+  pinMode(M8_PIN, OUTPUT);
+  digitalWrite(M9_PIN, RELAY_ON);
+  pinMode(M9_PIN, OUTPUT);
+  digitalWrite(M16_PIN, RELAY_OFF);
+  pinMode(M16_PIN, OUTPUT);
 
   delay(10);
   digitalWrite(RELAY_5V_PIN, HIGH);
@@ -490,10 +499,10 @@ void loop() {
   }
   if (currentMillis - lastSensorsReadMillis > SENSORS_READ_FREQUENCY) {
     lastSensorsReadMillis = currentMillis;
-    readLightSensors();
+//    readLightSensors();
     readDHT22Sensors();
     readFloorTemperatureSensors();
-    readWaterLeakSensors();
+//    readWaterLeakSensors();
   }
   if (currentMillis - lastSecuritySensorsReadMillis > SECURITY_SENSORS_READ_FREQUENCY) {
     lastSecuritySensorsReadMillis = currentMillis;
@@ -510,7 +519,7 @@ void loop() {
 void receive(const MyMessage &message) {
   Serial.println("Message received. Type: " + String(message.getType()) + ", device: " + String(message.getSensor()) + ", command: " + String(message.getCommand()) 
                 + ", bool: " + String(message.getBool()));
-	if (message.isAck()) {
+  if (message.isAck()) {
      Serial.println("This is an ack from gateway");
   }
   if (message.type == V_STATUS) {
@@ -533,6 +542,8 @@ void receive(const MyMessage &message) {
     setRelayValue(message.getBool(), M8_PIN, msgM8, "M8");
     } else if(message.getSensor() == M9_ID) {
     setRelayValue(message.getBool(), M9_PIN, msgM9, "M9");
+    } else if(message.getSensor() == M16_ID) {
+    setRelayValue(message.getBool(), M16_PIN, msgM16, "M16");
     } else {
       Serial.println("Unknown device: " + message.getSensor());
     }
@@ -578,6 +589,7 @@ void setInitialValuesFromController() {
   setInitialRelayValue(M15_ID, msgM15);
   setInitialRelayValue(M8_ID, msgM8);
   setInitialRelayValue(M9_ID, msgM9);
+  setInitialRelayValue(M16_ID, msgM16);
  
   wait(2000, C_SET, V_STATUS);
 }
@@ -600,7 +612,12 @@ void readLightSensors() {
 }
 
 void readDHT22Sensors() {
-  Serial.println("Reading DHT22 temperature and humidity sensors values");
+  Serial.println("========= Reading DHT22 temperature and humidity sensors values =========");
+  D9_DHT22.read22(D9_PIN);
+  delay(50);
+  sendValidSensorFloatValue(D9_DHT22.temperature, msgD9, "D9");
+  sendValidSensorFloatValue(D9_DHT22.humidity, msgC7, "C7");
+  
   d4Status = readDHT22Sensor(D4_DHT22, D4_PIN, msgD4, "D4", msgC2, "C2", d4Status);
   d2Status = readDHT22Sensor(D2_DHT22, D2_PIN, msgD2, "D2", msgC1, "C1", d2Status);
   d10Status = readDHT22Sensor(D10_DHT22, D10_PIN, msgD10, "D10", msgC8, "C8", d10Status);
@@ -614,6 +631,7 @@ void readDHT22Sensors() {
   returns DHT22 sensor status
 */
 int readDHT22Sensor(dht &DHT22, int pin, MyMessage &msgTemp, String deviceTemp, MyMessage &msgHum, String deviceHum, int status) {
+  Serial.println("---------------");
   Serial.println("Previous DHT22 temperature " + deviceTemp + ": " + DHT22.temperature + " and humidity " + deviceHum + ": " + DHT22.humidity + " sensors values");
   if (status != DHTLIB_OK) {
     String statusString = getDhtErrorStatus(status);
@@ -629,6 +647,7 @@ int readDHT22Sensor(dht &DHT22, int pin, MyMessage &msgTemp, String deviceTemp, 
     }
   }
   Serial.println("Reading new DHT22 temperature " + deviceTemp + " and humidity " + deviceHum + " sensors values");
+  Serial.println("---------------");
   return DHT22.read22(pin);
 }
 
@@ -722,8 +741,8 @@ float getNtcResistorTemperatureFromReadsSum(int readsSum) {
 */
 void safetyCheckForFloorHeater(float temperature, int floorHeaterPin, MyMessage &floorHeaterMsg, String floorHeaterDevice) {
   if (temperature > FLOOR_HEATER_SAFE_TEMPERATURE_LIMIT) {
-    Serial.println("Switching off floor heater " + floorHeaterDevice + ". NTC sensor shows safety temperature reached: " + temperature);
-    setRelayValue(false, floorHeaterPin, floorHeaterMsg, floorHeaterDevice);
+    Serial.println("DISABLED!!! Switching off floor heater " + floorHeaterDevice + ". NTC sensor shows safety temperature reached: " + temperature);
+//    setRelayValue(false, floorHeaterPin, floorHeaterMsg, floorHeaterDevice);
   }
 }
 
@@ -732,8 +751,8 @@ void safetyCheckForFloorHeater(float temperature, int floorHeaterPin, MyMessage 
 */
 void turnOnFloorHeaterIfNeeded(float temperature, int floorHeaterPin, String floorHeaterDevice) {
   if (temperature > FLOOR_TEMPERATURE_SENSOR_MIN_VALID_VALUE && temperature < FLOOR_HEATER_SAFE_TEMPERATURE_COOLDOWN_TEMP) {
-    Serial.println("Switching on floor heater " + floorHeaterDevice + ". NTC sensor shows safety temperature fell below " + FLOOR_HEATER_SAFE_TEMPERATURE_COOLDOWN_TEMP);
-    digitalWrite(floorHeaterPin, RELAY_ON);
+    Serial.println("DISABLED!!! Switching on floor heater " + floorHeaterDevice + ". NTC sensor shows safety temperature fell below " + FLOOR_HEATER_SAFE_TEMPERATURE_COOLDOWN_TEMP);
+//    digitalWrite(floorHeaterPin, RELAY_ON);
   }
 }
 
