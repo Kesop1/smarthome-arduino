@@ -116,8 +116,10 @@ MyMessage msgH1(H1_ID, V_LIGHT_LEVEL);
 #define MY_REPEATER_FEATURE
 
 //------------- relays -----------------//
-#define RELAY_ON 0  // GPIO value to write to turn on attached relay
-#define RELAY_OFF 1 // GPIO value to write to turn off attached relay
+#define RELAY_ON 0  // GPIO value to write to turn on attached relay LOW LEVEL TRIGGER
+#define RELAY_OFF 1 // GPIO value to write to turn off attached relay LOW LEVEL TRIGGER
+#define HLT_RELAY_ON 1  // GPIO value to write to turn on attached relay HIGH LEVEL TRIGGER
+#define HLT_RELAY_OFF 0 // GPIO value to write to turn off attached relay HIGH LEVEL TRIGGER
 #define RELAY_5V_PIN 6
 
 //IDs starting with 20
@@ -140,6 +142,18 @@ MyMessage msgM9(M9_ID, V_STATUS);
 #define M16_ID 24
 #define M16_PIN 10
 MyMessage msgM16(M16_ID, V_STATUS);
+
+#define M17_ID 25
+#define M17_PIN 11
+MyMessage msgM17(M17_ID, V_STATUS);
+
+#define M18_ID 26
+#define M18_PIN 30
+MyMessage msgM18(M18_ID, V_STATUS);
+
+#define M19_ID 27
+#define M19_PIN 31
+MyMessage msgM19(M19_ID, V_STATUS);
 
 //------------- roller shutters -----------------//
 //IDs starting with 10
@@ -272,7 +286,7 @@ MyMessage msgC9(C9_ID, V_HUM);
 2 -> DATA
 */
 #define G2_ID 60
-#define G2_PIN 11
+#define G2_PIN 18
 MyMessage msgG2(G2_ID, V_TRIPPED);
 int g2State = -1;
 
@@ -374,6 +388,9 @@ void presentation() {
   present(M8_ID, S_BINARY, "M8");
   present(M9_ID, S_BINARY, "M9");
   present(M16_ID, S_BINARY, "M16");
+  present(M17_ID, S_BINARY, "M17");
+  present(M18_ID, S_BINARY, "M18");
+  present(M19_ID, S_BINARY, "M19");
 
   present(D1_ID, S_TEMP, "D1");
   present(D3_ID, S_TEMP, "D3");
@@ -439,14 +456,16 @@ void initializeRelays() {
 
   digitalWrite(M6_PIN, RELAY_OFF);
   pinMode(M6_PIN, OUTPUT);
-  digitalWrite(M15_PIN, RELAY_OFF);
+  digitalWrite(M15_PIN, HLT_RELAY_OFF);
   pinMode(M15_PIN, OUTPUT);
-  digitalWrite(M8_PIN, RELAY_ON);
+  digitalWrite(M8_PIN, HLT_RELAY_ON);
   pinMode(M8_PIN, OUTPUT);
-  digitalWrite(M9_PIN, RELAY_ON);
+  digitalWrite(M9_PIN, HLT_RELAY_ON);
   pinMode(M9_PIN, OUTPUT);
-  digitalWrite(M16_PIN, RELAY_OFF);
+  digitalWrite(M16_PIN, HLT_RELAY_OFF);
   pinMode(M16_PIN, OUTPUT);
+  digitalWrite(M17_PIN, HLT_RELAY_OFF);
+  pinMode(M17_PIN, OUTPUT);
 
   delay(10);
   digitalWrite(RELAY_5V_PIN, HIGH);
@@ -536,14 +555,20 @@ void receive(const MyMessage &message) {
       setRelayValue(message.getBool(), M6_PIN, msgM6, "M6");
       turnD1RelatedFloorHeaterOnAfterCooldown = message.getBool();
     } else if(message.getSensor() == M15_ID) {
-      setRelayValue(message.getBool(), M15_PIN, msgM15, "M15");
+      setRelayValueHlt(message.getBool(), M15_PIN, msgM15, "M15");
       turnD3RelatedFloorHeaterOnAfterCooldown = message.getBool();
     } else if(message.getSensor() == M8_ID) {
-    setRelayValue(message.getBool(), M8_PIN, msgM8, "M8");
+    setRelayValueHlt(message.getBool(), M8_PIN, msgM8, "M8");
     } else if(message.getSensor() == M9_ID) {
-    setRelayValue(message.getBool(), M9_PIN, msgM9, "M9");
+    setRelayValueHlt(message.getBool(), M9_PIN, msgM9, "M9");
     } else if(message.getSensor() == M16_ID) {
-    setRelayValue(message.getBool(), M16_PIN, msgM16, "M16");
+    setRelayValueHlt(message.getBool(), M16_PIN, msgM16, "M16");
+    } else if(message.getSensor() == M17_ID) {
+    setRelayValueHlt(message.getBool(), M17_PIN, msgM17, "M17");
+    } else if(message.getSensor() == M18_ID) {
+    setRelayValue(message.getBool(), M18_PIN, msgM18, "M18");
+    } else if(message.getSensor() == M19_ID) {
+    setRelayValue(message.getBool(), M19_PIN, msgM19, "M19");
     } else {
       Serial.println("Unknown device: " + message.getSensor());
     }
@@ -563,6 +588,17 @@ void moveRollerShutter(boolean state, int pinDown, int pinUp, MyMessage &msg, St
     digitalWrite(pinUp, RELAY_OFF);
     delay(10);
     digitalWrite(pinDown, RELAY_ON);
+    send(msg.set(0));
+  } 
+}
+
+void setRelayValueHlt(boolean state, int pin, MyMessage &msg, String device) {
+  Serial.println("Setting " + device + " relay " + state?"ON":"OFF");
+  if (state) {
+    digitalWrite(pin, HLT_RELAY_ON);
+    send(msg.set(1));
+  } else {
+    digitalWrite(pin, HLT_RELAY_OFF);
     send(msg.set(0));
   } 
 }
@@ -590,6 +626,7 @@ void setInitialValuesFromController() {
   setInitialRelayValue(M8_ID, msgM8);
   setInitialRelayValue(M9_ID, msgM9);
   setInitialRelayValue(M16_ID, msgM16);
+  setInitialRelayValue(M17_ID, msgM17);
  
   wait(2000, C_SET, V_STATUS);
 }
