@@ -120,7 +120,7 @@ MyMessage msgH1(H1_ID, V_LIGHT_LEVEL);
 #define RELAY_OFF 1 // GPIO value to write to turn off attached relay LOW LEVEL TRIGGER
 #define HLT_RELAY_ON 1  // GPIO value to write to turn on attached relay HIGH LEVEL TRIGGER
 #define HLT_RELAY_OFF 0 // GPIO value to write to turn off attached relay HIGH LEVEL TRIGGER
-#define RELAY_5V_PIN 6
+#define RELAY_5V_PIN 3
 
 //IDs starting with 20
 #define M6_ID 20
@@ -128,15 +128,15 @@ MyMessage msgH1(H1_ID, V_LIGHT_LEVEL);
 MyMessage msgM6(M6_ID, V_STATUS);
 
 #define M15_ID 21
-#define M15_PIN 7
+#define M15_PIN 9
 MyMessage msgM15(M15_ID, V_STATUS);
 
 #define M8_ID 22
-#define M8_PIN 9
+#define M8_PIN 12
 MyMessage msgM8(M8_ID, V_STATUS);
 
 #define M9_ID 23
-#define M9_PIN 8
+#define M9_PIN 13
 MyMessage msgM9(M9_ID, V_STATUS);
 
 #define M16_ID 24
@@ -144,7 +144,7 @@ MyMessage msgM9(M9_ID, V_STATUS);
 MyMessage msgM16(M16_ID, V_STATUS);
 
 #define M17_ID 25
-#define M17_PIN 11
+#define M17_PIN 62
 MyMessage msgM17(M17_ID, V_STATUS);
 
 #define M18_ID 26
@@ -163,23 +163,23 @@ const long MAX_ROLLER_SHUTTER_OPERATION_DURATION = 25000;
 boolean rollerShuttersInOperation = false;
 
 #define M10_ID 10
-#define M10_DOWN_PIN 23
-#define M10_UP_PIN 22
+#define M10_DOWN_PIN 5
+#define M10_UP_PIN 4
 MyMessage msgM10(M10_ID, V_STATUS);
 
 #define M11_ID 11
-#define M11_DOWN_PIN 26
-#define M11_UP_PIN 27
+#define M11_DOWN_PIN 58
+#define M11_UP_PIN 57
 MyMessage msgM11(M11_ID, V_STATUS);
 
 #define M12_ID 12
-#define M12_DOWN_PIN 24
-#define M12_UP_PIN 25
+#define M12_DOWN_PIN 55 //A1
+#define M12_UP_PIN 56 //A2
 MyMessage msgM12(M12_ID, V_STATUS);
 
 #define M13_ID 13
-#define M13_DOWN_PIN 29
-#define M13_UP_PIN 28
+#define M13_DOWN_PIN 59
+#define M13_UP_PIN 60
 MyMessage msgM13(M13_ID, V_STATUS);
 
 
@@ -218,12 +218,12 @@ boolean turnD3RelatedFloorHeaterOnAfterCooldown = false;
 /*
 1- > 5V
 2 -> 10kO -5V - DATA
-3 -> 
+3 ->
 4 -> GND
 */
 dht D4_DHT22;
 #define D4_ID 32
-#define D4_PIN 3
+#define D4_PIN 63
 MyMessage msgD4(D4_ID, V_TEMP);
 int d4Status;
 
@@ -241,13 +241,13 @@ int d10Status;
 
 dht D6_DHT22;
 #define D6_ID 36
-#define D6_PIN 5
+#define D6_PIN 64
 MyMessage msgD6(D6_ID, V_TEMP);
 int d6Status;
 
 dht D9_DHT22;
 #define D9_ID 31
-#define D9_PIN 13
+#define D9_PIN 8
 MyMessage msgD9(D9_ID, V_TEMP);
 int d9Status;
 
@@ -286,7 +286,7 @@ MyMessage msgC9(C9_ID, V_HUM);
 2 -> DATA
 */
 #define G2_ID 60
-#define G2_PIN 18
+#define G2_PIN 6
 MyMessage msgG2(G2_ID, V_TRIPPED);
 int g2State = -1;
 
@@ -348,7 +348,7 @@ MyMessage msgF2(F2_ID, V_TRIPPED);
 int f2State = -1;
 
 #define F1_ID 91
-#define F1_PIN 12
+#define F1_PIN 61
 MyMessage msgF1(F1_ID, V_TRIPPED);
 int f1State = -1;
 
@@ -367,6 +367,11 @@ int i1State = -1;
 MyMessage msgI2(I2_ID, V_TRIPPED);
 int i2State = -1;
 
+
+//------------- smoke sensors -----------------//
+//IDs starting with 110
+#define J2_ID 110
+#define J2_PIN 7
 
 
 
@@ -416,7 +421,7 @@ void presentation() {
   present(E2_ID, S_WATER_LEAK, "E2");
   present(E1_ID, S_WATER_LEAK, "E1");
   present(E3_ID, S_WATER_LEAK, "E3");
-  
+
   present(F2_ID, S_SOUND, "F2");
   present(F1_ID, S_SOUND, "F1");
 
@@ -496,7 +501,7 @@ void initializeContactSensors() {
   pinMode(G1_PIN, INPUT);
   pinMode(G5_PIN, INPUT);
   pinMode(G7_PIN, INPUT);
-  // digitalWrite(G2_PIN, HIGH);  
+  // digitalWrite(G2_PIN, HIGH);
 }
 
 void initializeWaterLeakSensors() {
@@ -536,7 +541,7 @@ void loop() {
 }
 
 void receive(const MyMessage &message) {
-  Serial.println("Message received. Type: " + String(message.getType()) + ", device: " + String(message.getSensor()) + ", command: " + String(message.getCommand()) 
+  Serial.println("Message received. Type: " + String(message.getType()) + ", device: " + String(message.getSensor()) + ", command: " + String(message.getCommand())
                 + ", bool: " + String(message.getBool()));
   if (message.isAck()) {
      Serial.println("This is an ack from gateway");
@@ -589,7 +594,7 @@ void moveRollerShutter(boolean state, int pinDown, int pinUp, MyMessage &msg, St
     delay(10);
     digitalWrite(pinDown, RELAY_ON);
     send(msg.set(0));
-  } 
+  }
 }
 
 void setRelayValueHlt(boolean state, int pin, MyMessage &msg, String device) {
@@ -600,7 +605,7 @@ void setRelayValueHlt(boolean state, int pin, MyMessage &msg, String device) {
   } else {
     digitalWrite(pin, HLT_RELAY_OFF);
     send(msg.set(0));
-  } 
+  }
 }
 
 void setRelayValue(boolean state, int pin, MyMessage &msg, String device) {
@@ -611,7 +616,7 @@ void setRelayValue(boolean state, int pin, MyMessage &msg, String device) {
   } else {
     digitalWrite(pin, RELAY_OFF);
     send(msg.set(0));
-  } 
+  }
 }
 
 void setInitialValuesFromController() {
@@ -627,7 +632,7 @@ void setInitialValuesFromController() {
   setInitialRelayValue(M9_ID, msgM9);
   setInitialRelayValue(M16_ID, msgM16);
   setInitialRelayValue(M17_ID, msgM17);
- 
+
   wait(2000, C_SET, V_STATUS);
 }
 
@@ -654,7 +659,7 @@ void readDHT22Sensors() {
   delay(50);
   sendValidSensorFloatValue(D9_DHT22.temperature, msgD9, "D9");
   sendValidSensorFloatValue(D9_DHT22.humidity, msgC7, "C7");
-  
+
   d4Status = readDHT22Sensor(D4_DHT22, D4_PIN, msgD4, "D4", msgC2, "C2", d4Status);
   d2Status = readDHT22Sensor(D2_DHT22, D2_PIN, msgD2, "D2", msgC1, "C1", d2Status);
   d10Status = readDHT22Sensor(D10_DHT22, D10_PIN, msgD10, "D10", msgC8, "C8", d10Status);
@@ -745,7 +750,7 @@ void readFloorTemperatureSensors() {
 
   if (turnD1RelatedFloorHeaterOnAfterCooldown) turnOnFloorHeaterIfNeeded(d1Temperature, M6_PIN, "M6");
   if (turnD3RelatedFloorHeaterOnAfterCooldown) turnOnFloorHeaterIfNeeded(d3Temperature, M15_PIN, "M15");
-  
+
   safetyCheckForFloorHeater(d1Temperature, M6_PIN, msgM6, "M6");
   safetyCheckForFloorHeater(d3Temperature, M15_PIN, msgM15, "M15");
 }
