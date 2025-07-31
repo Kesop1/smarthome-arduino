@@ -144,7 +144,7 @@ MyMessage msgM9(M9_ID, V_STATUS);
 MyMessage msgM16(M16_ID, V_STATUS);
 
 #define M17_ID 25
-#define M17_PIN 62
+#define M17_PIN 11
 MyMessage msgM17(M17_ID, V_STATUS);
 
 #define M18_ID 26
@@ -168,8 +168,8 @@ boolean rollerShuttersInOperation = false;
 MyMessage msgM10(M10_ID, V_STATUS);
 
 #define M11_ID 11
-#define M11_DOWN_PIN 58
-#define M11_UP_PIN 57
+#define M11_DOWN_PIN 58 //A4
+#define M11_UP_PIN 57 //A3
 MyMessage msgM11(M11_ID, V_STATUS);
 
 #define M12_ID 12
@@ -178,8 +178,8 @@ MyMessage msgM11(M11_ID, V_STATUS);
 MyMessage msgM12(M12_ID, V_STATUS);
 
 #define M13_ID 13
-#define M13_DOWN_PIN 59
-#define M13_UP_PIN 60
+#define M13_DOWN_PIN 59 //A5
+#define M13_UP_PIN 60 //A6
 MyMessage msgM13(M13_ID, V_STATUS);
 
 
